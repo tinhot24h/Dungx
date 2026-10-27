@@ -2,7 +2,7 @@ import math
 import struct
 import unittest
 import zlib
-from design import artwork, layout, settings, frame_box, FRAMES
+from design import artwork, layout, settings, frame_box, video_box, FRAMES
 from fonts import FONTS, width, wrap
 
 
@@ -81,6 +81,16 @@ class DesignTests(unittest.TestCase):
                 self.assertGreaterEqual(b['x'],0)
                 self.assertLessEqual(b['x']+b['width'],720)
                 self.assertLessEqual(b['y']+b['height'],1280)
+
+    def test_pixel_coordinates_and_ninety_pixel_text(self):
+        opts=self.options(units='px',title='THỬ',title_size=90,title_x=90,title_y=90,title_width=500,
+                          frame_x=24,frame_y=800,frame_width=672,frame_height=350,
+                          video_x=-90,video_y=120,video_width=540,video_height=960)
+        item=layout(opts)[0]
+        self.assertEqual((item['x'],item['y'],item['size']),(90,90,90))
+        self.assertEqual(frame_box(opts),dict(x=24,y=800,width=672,height=350))
+        self.assertEqual(video_box(opts),dict(x=-90,y=120,width=540,height=960))
+        with self.assertRaises(ValueError):layout(self.options(units='px',title_x=700,title_width=100))
 
     def test_untrusted_values_rejected(self):
         for value in (-1,101,True,'50',math.inf,math.nan):

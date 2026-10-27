@@ -1,13 +1,14 @@
-REVIEW STUDIO 0.3 — THIẾT KẾ NỀN, KHUNG PNG, CHỮ VÀ VIDEO
+REVIEW STUDIO 0.4 — THIẾT KẾ NỀN, KHUNG PNG, CHỮ VÀ VIDEO
 
 CẬP NHẬT TỪ BẢN CŨ
-Đóng ứng dụng cũ. Giải nén toàn bộ ReviewStudio-v0.3.zip vào thư mục mới
+Đóng ứng dụng cũ. Giải nén toàn bộ ReviewStudio-v0.4.zip vào thư mục mới
 có quyền ghi. Không chạy trực tiếp từ trong ZIP. Nếu đã cài Python và
 FFmpeg thì không cần cài lại; chuyển xuống mục CHẠY.
 
 CÀI MỘT LẦN
 Cần Python 3.11+ và FFmpeg (có ffprobe, drawtext, libx264).
-Không cần pip, npm, API key. Font tiếng Việt đã kèm theo.
+Không cần pip/npm. Dựng video không cần API key; dịch AI cần key
+OpenAI của bạn. Font tiếng Việt đã kèm theo.
 
 Windows 10/11, PowerShell:
   winget install --exact --id Python.Python.3.12
@@ -41,8 +42,8 @@ DÙNG THỬ
    NỀN: màu gợi ý, màu tùy chọn, một màu/chuyển hai màu, vùng hòa nền.
    KHUNG: 6 kiểu có sẵn, không khung hoặc PNG từ máy. Đổi màu, vị trí,
    độ đục và kích thước khung. Độ bóng chỉ áp dụng khung hồng.
-   TIÊU ĐỀ/NỘI DUNG: font, màu, cỡ, vị trí, độ rộng, căn dòng, viền chữ.
-   VIDEO: phóng to/thu nhỏ, dịch ngang/dọc, nút đưa về giữa.
+   TIÊU ĐỀ/NỘI DUNG: font, màu, cỡ 12–144 px, X/Y, độ rộng, căn dòng, viền.
+   VIDEO: nhập X/Y/W/H theo px, giữ tỷ lệ 9:16 và nút căn giữa hai trục.
 4. Kéo trực tiếp: chọn lớp cần di chuyển trong hộp dưới bản xem trước
    rồi kéo trên hình. Khung và từng phần chữ di chuyển riêng.
 5. Bấm Xuất MP4, chờ sẵn sàng rồi bấm Tải video về máy.
@@ -82,6 +83,46 @@ PNG lỗi: xuất lại thành PNG tĩnh đúng kích thước cho phép.
 Xuất video lỗi: thử MP4 H.264 ngắn hơn, giảm nội dung chữ.
 
 ĐÃ KIỂM TRA
-Đã thử chức năng trên Linux/Chromium và bản ZIP giải nén.
+Đã thử dựng video trên Linux/Chromium và bản ZIP giải nén.
+Phần AI dùng phản hồi giả lập trong kiểm thử; chưa gọi OpenAI thật vì
+máy kiểm tra không có API key. Bạn cần nhập key có hạn mức để thử dịch.
 Chưa thử trực tiếp Windows/macOS. Đây là gói mã nguồn có trình khởi
 động; chưa phải EXE và không kèm Python/FFmpeg.
+
+TỌA ĐỘ PIXEL MỚI
+Canvas 720x1280 px. Góc trên trái là X=0,Y=0. X tăng sang phải, Y tăng
+xuống dưới. W là rộng, H là cao. Có thể nhập số trực tiếp, ví dụ cỡ chữ
+90 px, X=90, Y=120. Nút Căn giữa ngang/dọc áp dụng riêng từng lớp.
+X/Y là cạnh trái/trên của hộp, không phải tâm như bản 0.3. Nếu cùng
+trình duyệt và địa chỉ/cổng, thiết kế 0.3 được chuyển sang px khi chưa
+có bản lưu 0.4. Giữ tỷ lệ 9:16 khi sửa W/H video được bật mặc định.
+
+DỊCH VÀ VIẾT KỊCH BẢN TIẾNG VIỆT
+1. Mở tab Dịch & biên tập AI trên thanh đầu trang.
+2. Dán lời thoại/phụ đề tiếng Trung, tối đa 8.000 ký tự. Chưa tự lấy lời
+   nói từ video.
+3. Chọn Review/Tin tức/Mẹo/Giới thiệu, giọng văn, cách xưng hô và thời
+   lượng mục tiêu. Thời lượng chỉ là ước tính, không bảo đảm khớp video.
+4. Mở Kết nối OpenAI, nhập API key TRONG ỨNG DỤNG, không gửi key trong
+   chat. Model mặc định gpt-4.1-mini, có thể đổi nếu tài khoản hỗ trợ.
+   Key không lưu vào localStorage/file, tải lại trang cần nhập lại.
+   Nếu máy chủ có OPENAI_API_KEY hoặc REVIEW_OPENAI_KEY thì có thể để
+   trống ô key. OPENAI_MODEL là model mặc định tùy chọn.
+5. Bấm Dịch & viết lại. Văn bản/cấu hình gửi tới api.openai.com qua HTTPS.
+   Không gửi video hoặc PNG tới AI. Phí API tính riêng với ChatGPT.
+6. Đối chiếu bản dịch sát nghĩa và sửa kịch bản. Kiểm tra tên riêng, giá,
+   đơn vị, công dụng và các điểm AI đánh dấu. Không coi bản dịch là
+   xác minh sự thật.
+7. Sao chép hoặc Tải TXT để đưa vào công cụ tạo MP3 bên ngoài. Ứng dụng
+   không tự tạo giọng đọc. TXT chỉ chứa kịch bản sạch, mã UTF-8.
+8. Muốn lấy một đoạn lên video: bôi đen đoạn trong ô kịch bản (tối đa
+   600 ký tự), bấm Đưa đoạn chọn lên video. Không tự cắt mất kịch bản dài.
+
+LỖI OPENAI
+- Key sai/hết hiệu lực: nhập lại tại Kết nối. Không gửi key trong chat.
+- Hết hạn mức: kiểm tra thanh toán/hạn mức trên tài khoản API OpenAI.
+- Model không có quyền: chọn model được cấp quyền, hỗ trợ Responses API
+  và Structured Outputs.
+- Mất mạng/timeout: kiểm tra truy cập HTTPS tới api.openai.com.
+- Kết quả dở dang: giảm độ dài nguồn rồi thử lại.
+Văn bản AI tự lưu trên trình duyệt, có nút xóa. Key không được lưu kèm.

@@ -12,8 +12,9 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
-from design import settings, layout, artwork, frame_box
+from design import settings, layout, artwork, frame_box, video_box
 from fonts import FONTS
+import ai_translate
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / '.local'
@@ -23,6 +24,7 @@ FRAMES.mkdir(exist_ok=True)
 JOBS = {}
 LOCK = threading.Lock()
 RENDER_LOCK = threading.Lock()
+AI_SLOTS = threading.BoundedSemaphore(2)
 
 
 def probe(path):
@@ -66,15 +68,12 @@ def compose(folder, options):
                            f"fontsize={item['size']}:fontcolor={item['color'].replace('#','0x')}:"
                            f"x={item['line_x'][line_number]}:y={y}:"
                            f"borderw={item['outline']}:bordercolor={item['outline_color'].replace('#','0x')}")
-    zoom = options['zoom']/100
-    width = round(720*zoom/2)*2
-    height = round(1280*zoom/2)*2
-    x = round((720-width)/2+720*options['video_x']/100)
-    y = round((1280-height)/2+1280*options['video_y']/100)
+    video = video_box(options)
+    width,height,x,y = (video[k] for k in ('width','height','x','y'))
     color = options['color'].replace('#','0x')
     graph = (f"[0:v]split[src][bg];[bg]scale=720:1280,setsar=1,"
              f"drawbox=color={color}:t=fill[base];"
-             f"[src]scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,"
+             f"[src]scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,format=rgba,"
              f"scale={width}:{height},setsar=1[clip];"
              f"[base][clip]overlay={x}:{y}:shortest=1[placed];"
              "[placed][1:v]overlay=0:0:format=auto[design];")
@@ -125,15 +124,31 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(content)
 
+    def allowed(self):
+        port = self.server.server_port
+        hosts = (f'127.0.0.1:{port}',f'localhost:{port}')
+        origin = self.headers.get('Origin')
+        if self.headers.get('Host') not in hosts or (origin and origin not in ('http://'+host for host in hosts)):
+            self.respond(403, {'error':'Chỉ chấp nhận truy cập từ ứng dụng cục bộ.'})
+            return False
+        return True
+
     def do_GET(self):
+        if not self.allowed():
+            return
         path = urlparse(self.path).path
         if path == '/':
             return self.respond(200, (ROOT / 'index.html').read_bytes(), 'text/html; charset=utf-8')
+        if path in ('/studio.css','/studio.js','/ai_ui.js'):
+            mime = 'text/css' if path.endswith('.css') else 'text/javascript'
+            return self.respond(200, (ROOT/path.lstrip('/')).read_bytes(), mime+'; charset=utf-8')
         if path in ('/assets/'+font[0] for font in FONTS.values()):
             return self.respond(200, (ROOT / path.lstrip('/')).read_bytes(), 'font/ttf')
         match = re.fullmatch(r'/frames/([a-f0-9]{32})', path)
         if match and (FRAMES / (match[1]+'.png')).is_file():
             return self.respond(200, (FRAMES / (match[1]+'.png')).read_bytes(), 'image/png')
+        if path == '/ai-status':
+            return self.respond(200, {'configured':ai_translate.configured(),'model':ai_translate.default_model()})
         if path == '/health':
             return self.respond(200, {'status': 'ok'})
         match = re.fullmatch(r'/(jobs|download)/([a-f0-9]{32})', path)
@@ -157,9 +172,22 @@ class Handler(BaseHTTPRequestHandler):
         self.respond(404, {'error': 'Không tìm thấy.'})
 
     def do_POST(self):
+        if not self.allowed():
+            return
         path = urlparse(self.path).path
         try:
             size = int(self.headers.get('Content-Length', '0'))
+            if path == '/translate':
+                if not 0 < size <= 65536:
+                    raise ValueError('Yêu cầu dịch quá lớn.')
+                raw = json.loads(self.rfile.read(size))
+                if not AI_SLOTS.acquire(blocking=False):
+                    return self.respond(429, {'error':'Đang xử lý các bản dịch khác. Hãy chờ rồi thử lại.'})
+                try:
+                    result = ai_translate.translate(raw)
+                finally:
+                    AI_SLOTS.release()
+                return self.respond(200,result)
             if path == '/frame-upload':
                 if not 0 < size <= 5*1024*1024:
                     return self.respond(413, {'error': 'Khung PNG tối đa 5 MB.'})
@@ -207,7 +235,7 @@ class Handler(BaseHTTPRequestHandler):
                     custom = dict(url='/frames/'+opts['frame_id'],**frame_box(opts),opacity=opts['frame_opacity']/100)
                 return self.respond(200, {'image':'data:image/png;base64,'+
                                          base64.b64encode(artwork(opts)).decode(),
-                                         'text':layout(opts),'custom':custom,'frame':frame_box(opts)})
+                                         'text':layout(opts),'custom':custom,'frame':frame_box(opts),'video':video_box(opts)})
             if path == '/render':
                 if not 0 < size <= 8192:
                     raise ValueError('Yêu cầu không hợp lệ.')
@@ -231,6 +259,8 @@ class Handler(BaseHTTPRequestHandler):
                 threading.Thread(target=render, args=(key, command), daemon=True).start()
                 return self.respond(202, {'id': key})
             self.respond(404, {'error': 'Không tìm thấy.'})
+        except ai_translate.AIError as error:
+            self.respond(error.status, {'error':str(error)})
         except ValueError as error:
             self.respond(400, {'error': str(error)})
         except (KeyError, TypeError, subprocess.SubprocessError):

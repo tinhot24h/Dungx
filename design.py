@@ -13,6 +13,10 @@ def settings(raw):
     if not isinstance(raw, dict):
         raise ValueError('Yêu cầu không hợp lệ.')
     out = dict(raw)
+    out.setdefault('units','percent')
+    if out['units'] not in ('px','percent'):
+        raise ValueError('Đơn vị không hợp lệ.')
+    px = out['units'] == 'px'
     out.setdefault('template','pink')
     if out['template'] not in ('pink','blue'):
         raise ValueError('Mẫu không hợp lệ.')
@@ -32,10 +36,19 @@ def settings(raw):
                 frame_x=(50,0,100),frame_y=(62,0,95),frame_width=(90,20,100),
                 frame_height=(26,8,60),frame_opacity=(100,0,100),gloss=(65,0,100),
                 zoom=(100,50,200),video_x=(0,-80,80),video_y=(0,-80,80))
+    if px:
+        spec.update(fade_start=(563,0,1152),fade_height=(230,16,768),
+                    frame_x=(36,-720,720),frame_y=(794,-1280,1280),
+                    frame_width=(648,80,720),frame_height=(333,60,1000),
+                    video_x=(0,-2160,720),video_y=(0,-3840,1280),
+                    video_width=(720,180,2160),video_height=(1280,320,3840))
     for name in ('title','body'):
-        spec.update({name+'_size':(30 if name=='title' else 22,12,72),
+        spec.update({name+'_size':(30 if name=='title' else 22,12,144),
                      name+'_x':(50,0,100),name+'_y':(64 if name=='title' else 73,0,98),
                      name+'_width':(76,20,100),name+'_outline':(1,0,5),name+'_gap':(4,0,24)})
+        if px:
+            spec.update({name+'_x':(86,0,719),name+'_y':(819 if name=='title' else 934,0,1270),
+                         name+'_width':(548,60,720)})
         out.setdefault(name+'_font','sans-bold' if name=='title' else 'sans')
         out.setdefault(name+'_align','center')
         if out[name+'_font'] not in FONTS or out[name+'_align'] not in ('left','center','right'):
@@ -51,7 +64,18 @@ def settings(raw):
     return out
 
 
+def video_box(opts):
+    if opts.get('units') == 'px':
+        return {key:round(opts['video_'+key]) for key in ('x','y','width','height')}
+    zoom = opts['zoom']/100
+    w,h = round(720*zoom/2)*2,round(1280*zoom/2)*2
+    return dict(width=w,height=h,x=round((720-w)/2+720*opts['video_x']/100),
+                y=round((1280-h)/2+1280*opts['video_y']/100))
+
+
 def frame_box(opts):
+    if opts.get('units') == 'px':
+        return {key:round(opts['frame_'+key]) for key in ('x','y','width','height')}
     w=round(W*opts['frame_width']/100)
     h=round(H*opts['frame_height']/100)
     x=round(max(0,min(W-w,W*opts['frame_x']/100-w/2)))
@@ -66,13 +90,16 @@ def layout(opts):
         if not text.strip():
             continue
         font,size=opts[key+'_font'],opts[key+'_size']
-        box_width=round(W*opts[key+'_width']/100)
+        px = opts.get('units') == 'px'
+        box_width=round(opts[key+'_width'] if px else W*opts[key+'_width']/100)
         lines=wrap(text,font,size,box_width-2*opts[key+'_outline']-4)
         step=size+opts[key+'_gap']
-        y=round(H*opts[key+'_y']/100)
+        y=round(opts[key+'_y'] if px else H*opts[key+'_y']/100)
         if len(lines)>16 or y+len(lines)*step>H-4:
             raise ValueError(('Tiêu đề' if key=='title' else 'Nội dung')+' vượt khung hình. Giảm cỡ chữ, tăng độ rộng hoặc kéo lên.')
-        x=round(max(2,min(W-box_width-2,W*opts[key+'_x']/100-box_width/2)))
+        x=round(opts[key+'_x'] if px else max(2,min(W-box_width-2,W*opts[key+'_x']/100-box_width/2)))
+        if x+box_width>W:
+            raise ValueError('Hộp chữ vượt cạnh phải. Giảm X hoặc độ rộng hộp chữ.')
         offsets=[]
         for line in lines:
             line_width=width(line,font,size)
@@ -89,8 +116,8 @@ def layout(opts):
 def artwork(opts):
     color=tuple(bytes.fromhex(opts['color'][1:]))
     other=tuple(bytes.fromhex(opts['color2'][1:])) if opts['background']=='gradient' else color
-    start=H*opts['fade_start']/100
-    height=H*opts['fade_height']/100
+    start=opts['fade_start'] if opts.get('units')=='px' else H*opts['fade_start']/100
+    height=opts['fade_height'] if opts.get('units')=='px' else H*opts['fade_height']/100
     pixels=[]
     for y in range(H):
         t=min(1,max(0,(y-start)/height))

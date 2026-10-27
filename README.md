@@ -1,55 +1,65 @@
-# Review Studio 0.3
+# Review Studio 0.4
 
-Công cụ cục bộ thiết kế video review bán hàng, xuất MP4 H.264/AAC 720×1280 và giữ âm thanh gốc.
+Công cụ cục bộ dựng video review 9:16 và biên tập lời tiếng Việt từ văn bản tiếng Trung.
 
-**[Tải bản 0.3](https://github.com/tinhot24h/Dungx/raw/refs/heads/main/ReviewStudio-v0.3.zip)** · Hướng dẫn chi tiết: `HUONG_DAN.txt`.
+**[Tải bản 0.4](https://github.com/tinhot24h/Dungx/raw/refs/heads/main/ReviewStudio-v0.4.zip)** · Cài/chạy: `HUONG_DAN.txt`.
 
-## Các tính năng mới
+## Hai không gian làm việc
 
-- **Nền:** tám màu gợi ý, chọn màu bất kỳ, nền một màu hoặc chuyển hai màu; chỉnh vị trí và độ dài vùng hòa nền, độ đục 0–100%.
-- **Khung:** sáu kiểu Hồng bóng, Kính trong, Viền đôi, Tối giản, Neon, Thiệp; hoặc không dùng khung. Có thể đổi màu bên trong/viền, độ đục, kích thước và vị trí khung. Kính trong là lớp bán trong suốt, không phải blur hậu cảnh.
-- **Khung PNG từ máy:** PNG tĩnh có alpha, tối đa 5 MB, 4096 px mỗi cạnh và 8 triệu điểm ảnh. Giữ nguyên tỷ lệ ảnh trong hộp khung, căn giữa; chỉnh hộp để phù hợp thiết kế. PNG được chuẩn hóa về một ảnh RGBA. Với PNG động, chỉ lấy khung hình đầu.
-- **Tiêu đề và nội dung độc lập:** sáu lựa chọn font từ ba họ Sans/Serif/Mono (thường/đậm), màu chữ, cỡ 12–72 px, căn trái/giữa/phải, vị trí, độ rộng hộp, khoảng dòng và màu/độ dày viền. Hỗ trợ Enter xuống dòng. Tự ngắt dòng theo độ rộng font; báo lỗi nếu chữ vượt chiều cao khung hình.
-- **Video:** thu nhỏ/phóng to 50–200%, dịch ngang và dọc; phần trống dùng màu nền chính. Video khác tỷ lệ được cắt về 9:16 trước khi đặt lên nền.
-- **Kéo trực tiếp:** chọn lớp video/khung/tiêu đề/nội dung dưới bản xem trước rồi kéo. Khung và chữ không bị buộc di chuyển cùng nhau.
-- **Bỏ CTA:** không còn ô lời kêu gọi hành động và không vẽ CTA trong file xuất.
-- Tự lưu thiết kế trong trình duyệt. Font được đóng gói kèm, không tải font từ Internet. Nền và khung dùng chung giữa xem trước và xuất; viền/baseline chữ có thể chênh nhẹ giữa trình duyệt và FFmpeg.
+**Dựng video:** giao diện chia nguồn, canvas và bảng thuộc tính. Nhập X/Y/W/H theo pixel thật trên canvas 720×1280. X/Y là góc trên bên trái; nút căn giữa ngang/dọc cho khung, từng hộp chữ và video. Giữ thanh trượt kèm ô số cho các thông số như độ đục/vùng hòa nền. Cỡ chữ 12–144 px, có thể nhập trực tiếp 90 px. W/H video liên kết 9:16 mặc định; bỏ chọn để kéo giãn hình.
 
-## Chạy
+**Dịch & biên tập AI:** dán văn bản Trung → OpenAI trả bản dịch sát nghĩa, bản viết lại và điểm cần kiểm chứng. Chọn Review / Tin tức / Chia sẻ mẹo / Giới thiệu sản phẩm; chọn giọng văn, xưng hô và mục tiêu 15/30/60/90 giây hoặc giữ đủ ý. Sửa hai bản, sao chép hoặc tải TXT UTF-8 để tạo MP3 ở công cụ ngoài. Thời lượng đọc chỉ ước tính 2,8 tiếng/giây. Có thể bôi đen một đoạn tối đa 600 ký tự rồi đưa vào khung nội dung video.
 
-Cần Python 3.11+ và FFmpeg/FFprobe có libx264/drawtext. Không cần pip/npm, API key hay dịch vụ ngoài. Phông DejaVu và giấy phép ở `assets/`.
+**Chưa có tự trích lời từ video, OCR, tạo giọng đọc AI hoặc tạo MP3.** Nguồn dịch hiện là văn bản do bạn dán vào, tối đa 8.000 ký tự.
+
+## OpenAI: kết nối và chi phí
+
+Ở tab Dịch & biên tập AI, mở Kết nối OpenAI và nhập API key trong ứng dụng, không gửi key trong chat. Key nhập tại giao diện chỉ dùng trong phiên, không lưu vào thiết kế, localStorage hoặc file; tải lại trang cần nhập lại. Có thể thay bằng biến máy chủ `REVIEW_OPENAI_KEY` hoặc `OPENAI_API_KEY`. Model mặc định `gpt-4.1-mini`, có thể đổi trong giao diện hoặc qua `OPENAI_MODEL`; model cần hỗ trợ Responses API và Structured Outputs.
+
+Chỉ khi bấm Dịch & viết lại, ứng dụng gửi văn bản/cấu hình tới `https://api.openai.com/v1/responses` bằng HTTPS, với `store:false`. Không gửi clip hoặc PNG tới OpenAI. Phí API tính riêng với gói ChatGPT và theo tài khoản/key của bạn. Cần Internet tới `api.openai.com`.
+
+Prompt yêu cầu giữ dữ kiện, không tự quy đổi giá hay bịa trải nghiệm/công dụng. Đây là hướng dẫn cho mô hình, không thay thế việc đối chiếu của người dùng. Lỗi key, quyền model, hết hạn mức và mất mạng hiển thị riêng; lỗi không xóa kịch bản trước đó.
+
+## Các chức năng dựng video được giữ
+
+- Nền một màu hoặc chuyển hai màu, tám màu gợi ý, lớp hòa nền alpha mềm.
+- Sáu khung dựng sẵn; đổi màu, viền, độ đục, độ bóng của khung hồng. Kính trong là lớp bán trong suốt, không phải blur hậu cảnh.
+- Khung PNG từ máy (tối đa 5 MB, 4096 px/cạnh, 8 triệu điểm ảnh). Giữ tỷ lệ và căn giữa trong hộp; PNG động chỉ lấy hình đầu.
+- Tiêu đề/nội dung chỉnh riêng font, màu, cỡ, vị trí, độ rộng, căn dòng, khoảng dòng và viền. Sáu font từ ba họ Sans/Serif/Mono, có nét thường/đậm, kèm giấy phép trong `assets/`.
+- Kéo trực tiếp bốn lớp; bộ điều khiển phát/tua/tắt tiếng xem trước. Khung/chữ không buộc di chuyển cùng nhau.
+- MP4 H.264/AAC 720×1280, giữ tiếng gốc, không thêm CTA. Clip tối đa 100 MB / 180 giây.
+
+## Chạy và cập nhật
+
+Cần Python 3.11+ và FFmpeg/FFprobe có libx264/drawtext. Không cài pip/npm hoặc SDK OpenAI; dùng thư viện chuẩn Python. Python/FFmpeg không kèm ZIP, đây chưa phải EXE.
 
 ```sh
 python3 launch.py
 ```
 
-Windows: mở `START_WINDOWS.bat`. macOS/Linux: chạy lệnh trên trong thư mục đã giải nén. Trình duyệt tự mở cổng loopback 8000. Đặt `PORT` để đổi cổng hoặc thêm `--no-browser` để không tự mở trình duyệt. Health check: `curl --fail http://127.0.0.1:8000/health`.
+Windows mở `START_WINDOWS.bat`. macOS/Linux dùng lệnh trên trong thư mục giải nén. Trình duyệt tự mở cổng loopback 8000; `PORT` đổi cổng, `--no-browser` không tự mở trình duyệt. Health: `curl --fail http://127.0.0.1:8000/health`.
 
-## Quy trình
+Dừng bản cũ, giải nén bản mới vào thư mục mới rồi chạy. Không cần cài lại Python/FFmpeg đã có. Nếu cùng trình duyệt/địa chỉ/cổng và chưa có thiết kế 0.4, ứng dụng chuyển bản lưu 0.3 từ % sang px. PNG thuộc thư mục cũ cần tải lại khi chuyển thư mục.
 
-1. Chọn clip tối đa 100 MB / 180 giây. Ưu tiên clip gốc chưa có chữ.
-2. Chọn mẫu hồng/xanh làm điểm bắt đầu. Mở từng tab Nền / Khung / Tiêu đề / Nội dung / Video để chỉnh.
-3. Khung PNG: tab Khung → tải tệp PNG. Đổi vị trí và kích thước; sau đó đặt chữ vào vùng trống của ảnh.
-4. Để kéo lớp, chọn đúng lớp trong hộp dưới bản xem trước. Đặt lại về Tắt để thao tác cuộn bình thường trên điện thoại.
-5. Xuất MP4, chờ sẵn sàng và tải về. File dùng thiết kế tại thời điểm bấm Xuất.
+## Tọa độ và lưu dữ liệu
 
-Thay đổi khung không tự di chuyển chữ. Nội dung dài hoặc chữ lớn có thể tràn khỏi khung trang trí: xem trước rồi tăng khung hoặc giảm chữ. Xuất bị chặn nếu chữ tràn khỏi khung hình. Xóa/sửa chữ hoặc watermark đã có trong clip gốc không được hỗ trợ.
+X tăng sang phải, Y tăng xuống dưới. X/Y của khung, video là cạnh trái/trên, không phải tâm; X/Y hộp chữ cũng vậy. Căn giữa hộp chữ đồng thời chọn căn dòng giữa. Khung/video có thể nằm một phần ngoài canvas; phần đó bị cắt khi xuất. Chữ vượt cạnh phải hoặc chiều cao canvas sẽ báo lỗi. Nền và khung dùng chung giữa xem trước/xuất; baseline và viền chữ có thể chênh nhẹ giữa trình duyệt và FFmpeg.
 
-## Cập nhật và dữ liệu
+Thiết kế và văn bản AI lưu riêng trong localStorage; có nút xóa văn bản AI. Video/PNG/MP4 ở `.local/`, được Git/ZIP bỏ qua. Trạng thái tác vụ xuất ở RAM, mất khi máy chủ dừng: tải kết quả trước khi dừng. Chỉ xóa `.local/` sau khi ứng dụng đã dừng và đã giữ các tệp cần thiết.
 
-Dừng bản cũ, giải nén bản mới vào thư mục mới, chạy trình khởi động. Không cần cài lại Python/FFmpeg. Không chép đè lên phiên đang chạy.
+Máy chủ chỉ chấp nhận Host/Origin cục bộ, không phục vụ triển khai công khai. Chưa có đăng nhập, dọn ổ đĩa hay giới hạn hàng đợi video. Chưa có ghép nhiều clip và tự đăng TikTok. Chữ/watermark trong nguồn không bị xóa.
 
-Thiết kế lưu bằng khóa trình duyệt riêng cho bản 0.3. Video, PNG tải lên và kết quả nằm trong `.local/`, được Git và gói ZIP bỏ qua. Khi chuyển sang thư mục/máy mới, tải lại PNG nếu thiết kế báo mất khung. Trạng thái tác vụ ở RAM, mất khi khởi động lại: hãy tải MP4 cần giữ trước khi dừng. Chỉ xóa `.local/` sau khi ứng dụng đã dừng và đã lưu các kết quả cần giữ.
-
-## Giới hạn và xác minh
-
-Ứng dụng cục bộ chưa có xác thực, giới hạn hàng đợi hoặc dọn dữ liệu tự động. Chưa có ghép nhiều clip, giọng đọc AI, xuất EXE hay tự đăng TikTok. Python/FFmpeg không nằm trong ZIP. Chưa chạy thử trực tiếp trên Windows/macOS.
-
-Đã kiểm tra trên Linux/Chromium: sáu khung xuất có âm thanh, PNG trong suốt xem trước/xuất, font Sans/Serif/Mono, xuống dòng, căn chữ, màu nền chuyển, kéo cả bốn lớp, di chuyển/thu nhỏ video, lưu thiết kế và bố cục 390px. Kiểm tra pixel xác nhận video di chuyển đúng chỗ và để lộ màu nền đã chọn. Unit test kiểm tra alpha mềm, khung/chữ độc lập, ngắt dòng tiếng Việt, vị trí giới hạn và từ chối thông số không hợp lệ.
+## Kiểm tra và đóng gói
 
 ```sh
 python3 -m unittest discover -s tests -v
+node --check studio.js
+node --check ai_ui.js
 python3 build_package.py
 ```
 
-API: `POST /upload` (byte video); `POST /frame-upload` (byte PNG); `POST /design` (JSON thiết kế → PNG nền/khung và layout chữ); `POST /render` (thiết kế + id video); `GET /jobs/<id>`; `GET /download/<id>`. PNG tùy chỉnh được phục vụ bằng `GET /frames/<id>`.
+Đã kiểm tra trên Linux/Chromium: số px/cỡ 90 px, căn giữa hai trục, W/H liên kết, kéo lớp, xuất khung dựng sẵn/PNG với âm thanh, lưu thiết kế và bố cục 390px. Luồng UI AI được kiểm tra bằng phản hồi giả lập: cấu hình phong cách/thời lượng, hai kết quả, copy/TXT, chuyển đoạn chọn, lỗi hạn mức và không lưu key. Unit test giả lập HTTP để kiểm tra request HTTPS, Responses API/JSON schema, `store:false`, thiếu key, từ chối phản hồi lỗi/dở dang và thông báo lỗi không lộ key.
+
+**Chưa thử gọi OpenAI thật vì máy kiểm tra không có API key.** Cần nhập key có hạn mức API để kiểm tra bản dịch thực tế. Chưa chạy trực tiếp Windows/macOS.
+
+API: `/upload`, `/frame-upload`, `/design`, `/render`, `/jobs/<id>`, `/download/<id>`, `/frames/<id>`, `/ai-status`, `/translate`. `/translate` nhận `source,style,tone,pronoun,duration,model` và `api_key` tùy chọn; trả `literal,script,notes,model`.
