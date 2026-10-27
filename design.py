@@ -53,6 +53,8 @@ def settings(raw):
                          name+'_width':(548,60,720)})
         out.setdefault(name+'_font','sans-bold' if name=='title' else 'sans')
         out.setdefault(name+'_align','center')
+        out.setdefault(name+'_valign','top')
+        if out[name+'_valign'] not in ('top','middle','bottom'):raise ValueError('Căn dọc không hợp lệ.')
         if out[name+'_font'] not in FONTS or out[name+'_align'] not in ('left','center','right','justify'):
             raise ValueError('Font hoặc căn chữ không hợp lệ.')
     for key,(default,low,high) in spec.items():
@@ -101,10 +103,12 @@ def layout(opts,strict=True):
             lines.extend(wrapped);paragraph_ends.extend([False]*(len(wrapped)-1)+[True])
         step=size+opts[key+'_gap'];natural=len(lines)*step
         height=opts.get(key+'_height',0) or natural
+        vertical=opts.get(key+'_valign','top')
+        text_offset=max(0,height-natural)*{'top':0,'middle':.5,'bottom':1}[vertical]
         y=round(opts[key+'_y'] if px else H*opts[key+'_y']/100)
         x=round(opts[key+'_x'] if px else max(2,min(W-box_width-2,W*opts[key+'_x']/100-box_width/2)))
         problems=[]
-        if len(lines)>40 or y+natural>H-4:problems.append('Chữ vượt chiều cao canvas. Kéo lên hoặc giảm cỡ chữ.')
+        if len(lines)>40 or y+text_offset+natural>H-4:problems.append('Chữ vượt chiều cao canvas. Kéo lên hoặc giảm cỡ chữ.')
         if x+box_width>W:problems.append('Hộp chữ vượt cạnh phải. Giảm X hoặc độ rộng.')
         if natural>height+.01:problems.append('Chữ tràn chiều cao hộp. Tăng H, giảm font hoặc đặt H=0 tự động.')
         if strict and problems:raise ValueError(('Tiêu đề: ' if key=='title' else 'Nội dung: ')+problems[0])
@@ -121,7 +125,7 @@ def layout(opts,strict=True):
                 line_runs.append(runs)
             else:line_runs.append([dict(text=line,x=at)])
         result.append(dict(key=key,text='\n'.join(lines),lines=lines,line_x=offsets,line_runs=line_runs,
-                           x=x,y=y,width=box_width,height=height,natural_height=natural,size=size,gap=opts[key+'_gap'],
+                           x=x,y=y,width=box_width,height=height,text_offset=text_offset,content_y=y+text_offset,valign=vertical,natural_height=natural,size=size,gap=opts[key+'_gap'],
                            font=font,family=FONTS[font][1],align=opts[key+'_align'],color=opts[key+'_color'],
                            outline=opts[key+'_outline'],outline_color=opts[key+'_outline_color'],warnings=problems))
     return result

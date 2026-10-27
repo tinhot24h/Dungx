@@ -13,6 +13,7 @@ import time
 from urllib.parse import unquote,quote
 import asset_store
 import media_engine
+import media_preview
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -30,6 +31,7 @@ FRAMES.mkdir(exist_ok=True)
 AUDIO = DATA / 'audio'
 AUDIO.mkdir(exist_ok=True)
 JOBS = {}
+CANCELS = {}
 LOCK = threading.Lock()
 RENDER_LOCK = threading.Lock()
 AI_SLOTS = threading.BoundedSemaphore(2)
@@ -67,31 +69,49 @@ def compose(folder,options):
     return media_engine.build(folder,options,folder/'source',video,audio_path,audio,frame)
 
 
-def render(job_id,command,plan,name):
-    with RENDER_LOCK:
+def render(job_id,command,plan,name,cancel=None):
+    cancel=cancel or threading.Event()
+    folder=DATA/job_id;process=None;acquired=False
+    result={'state':'error','error':'Xuất video bị gián đoạn.','name':name}
+    try:
+        while not cancel.is_set():
+            acquired=RENDER_LOCK.acquire(timeout=.1)
+            if acquired:break
+        if cancel.is_set():return
         with LOCK:JOBS[job_id]={'state':'rendering','progress':0,'name':name,'plan':plan}
-        folder=DATA/job_id;progress=folder/'progress.txt';progress.unlink(missing_ok=True)
-        try:
-            with (folder/'render-error.log').open('wb') as err:
-                process=subprocess.Popen(command,cwd=folder,stdout=subprocess.DEVNULL,stderr=err)
-                deadline=time.monotonic()+7200
-                while process.poll() is None:
-                    if time.monotonic()>deadline:
-                        process.kill();process.wait();raise TimeoutError('Quá 2 giờ xử lý. Giảm thời lượng/độ phân giải.')
-                    try:
-                        contents=progress.read_text(errors='replace')[-10000:]
-                        values=re.findall(r'out_time_us=(\d+)',contents)
-                        percent=min(99,round(int(values[-1])/1000000/plan['duration']*100)) if values else 0
-                        with LOCK:JOBS[job_id]['progress']=percent
-                    except OSError:pass
-                    time.sleep(.4)
-                if process.returncode:raise ValueError('FFmpeg xuất lỗi. Kiểm tra media và thông số, hoặc giảm độ phân giải.')
-            actual=media_engine.probe(folder/'review.mp4')
-            if (actual['width'],actual['height'])!=(plan['width'],plan['height']):raise ValueError('Kích thước xuất không đúng yêu cầu.')
-            result={'state':'done','progress':100,'url':f'/download/{job_id}','name':name,'plan':plan,'duration':actual['duration']}
-        except (subprocess.SubprocessError,OSError,ValueError,TimeoutError) as exc:
-            result={'state':'error','error':str(exc),'name':name}
-        with LOCK:JOBS[job_id]=result
+        progress=folder/'progress.txt';progress.unlink(missing_ok=True)
+        with (folder/'render-error.log').open('wb') as err:
+            process=subprocess.Popen(command,cwd=folder,stdout=subprocess.DEVNULL,stderr=err)
+            deadline=time.monotonic()+7200
+            while process.poll() is None:
+                if cancel.wait(.15):
+                    process.terminate()
+                    try:process.wait(timeout=3)
+                    except subprocess.TimeoutExpired:process.kill();process.wait()
+                    break
+                if time.monotonic()>deadline:
+                    process.kill();process.wait();raise TimeoutError('Quá 2 giờ xử lý. Giảm thời lượng/độ phân giải.')
+                try:
+                    values=re.findall(r'out_time_us=(\d+)',progress.read_text(errors='replace')[-10000:])
+                    percent=min(99,round(int(values[-1])/1000000/plan['duration']*100)) if values else 0
+                    with LOCK:JOBS[job_id]['progress']=percent
+                except OSError:pass
+            if cancel.is_set():return
+            if process.returncode:raise ValueError('FFmpeg xuất lỗi. Kiểm tra media và thông số, hoặc giảm độ phân giải.')
+        actual=media_engine.probe(folder/'review.mp4')
+        if (actual['width'],actual['height'])!=(plan['width'],plan['height']):raise ValueError('Kích thước xuất không đúng yêu cầu.')
+        result={'state':'done','progress':100,'url':f'/download/{job_id}','name':name,'plan':plan,'duration':actual['duration']}
+    except (subprocess.SubprocessError,OSError,ValueError,TimeoutError) as exc:
+        result={'state':'error','error':str(exc),'name':name}
+    finally:
+        if process is not None and process.poll() is None:process.kill();process.wait()
+        with LOCK:
+            if cancel.is_set():
+                (folder/'review.mp4').unlink(missing_ok=True)
+                result={'state':'cancelled','name':name,'progress':0}
+            JOBS[job_id]=result
+            CANCELS.pop(job_id,None)
+        if acquired:RENDER_LOCK.release()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -163,7 +183,7 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == '/':
             return self.respond(200, (ROOT / 'index.html').read_bytes(), 'text/html; charset=utf-8')
-        if path in ('/studio.css','/studio.js','/ai_ui.js','/audio_ui.js','/editor_ui.js'):
+        if path in ('/studio.css','/studio.js','/ai_ui.js','/audio_ui.js','/editor_ui.js','/timeline_ui.js'):
             mime = 'text/css' if path.endswith('.css') else 'text/javascript'
             return self.respond(200, (ROOT/path.lstrip('/')).read_bytes(), mime+'; charset=utf-8')
         if path in ('/assets/'+font[0] for font in FONTS.values()):
@@ -173,6 +193,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.respond(200, (FRAMES / (match[1]+'.png')).read_bytes(), 'image/png')
         if path == '/audio/assets':
             return self.respond(200,{'assets':asset_store.assets(AUDIO)})
+        analysis=re.fullmatch(r'/media/analysis/(video|audio)/([a-f0-9]{32})',path)
+        if analysis:
+            kind,aid=analysis.groups()
+            source=DATA/aid/'source' if kind=='video' else AUDIO/(aid+'.mp3')
+            if not source.is_file():return self.respond(404,{'error':'Nguồn không còn trong thư mục này.'})
+            try:return self.respond(200,media_preview.analyze(source,DATA/'previews'/(kind+'-'+aid+'.json'),kind))
+            except (OSError,ValueError,subprocess.SubprocessError):return self.respond(400,{'error':'Chưa tạo được hình/sóng âm. Vẫn có thể cắt bằng số.'})
         video_match=re.fullmatch(r'/media/video/([a-f0-9]{32})(/info)?',path)
         if video_match and (DATA/video_match[1]/'source').is_file():
             if video_match[2]:
@@ -340,6 +367,17 @@ class Handler(BaseHTTPRequestHandler):
                 image=lambda data:'data:image/png;base64,'+base64.b64encode(data).decode()
                 return self.respond(200,{'image':image(bg),'frame_image':image(frame) if frame else None,
                                          'text':layout(opts,strict=False),'custom':custom,'frame':frame_box(opts),'video':video_box(opts)})
+            cancel_match=re.fullmatch(r'/jobs/([a-f0-9]{32})/cancel',path)
+            if cancel_match:
+                key=cancel_match[1]
+                with LOCK:
+                    job=JOBS.get(key)
+                    if not job:return self.respond(404,{'error':'Không tìm thấy tác vụ xuất.'})
+                    event=CANCELS.get(key)
+                    if event and job['state'] in ('queued','rendering','cancelling'):
+                        event.set();job['state']='cancelling'
+                    result=dict(job)
+                return self.respond(200,result)
             if path == '/render':
                 if not 0 < size <= 8192:
                     raise ValueError('Yêu cầu không hợp lệ.')
@@ -351,7 +389,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not (folder / 'source').is_file():
                     raise ValueError('Không tìm thấy clip.')
                 with LOCK:
-                    if JOBS.get(key, {}).get('state') in ('queued', 'rendering'):
+                    if JOBS.get(key, {}).get('state') in ('queued', 'rendering', 'cancelling'):
                         return self.respond(409, {'error': 'Clip đang được xử lý.'})
                     JOBS[key] = {'state': 'queued'}
                 try:
@@ -361,7 +399,9 @@ class Handler(BaseHTTPRequestHandler):
                         JOBS.pop(key, None)
                     raise
                 name=asset_store.clean_name(opts.get('project_name'),'review-video').removesuffix('.mp4')
-                threading.Thread(target=render,args=(key,command,plan,name),daemon=True).start()
+                cancel=threading.Event()
+                with LOCK:CANCELS[key]=cancel
+                threading.Thread(target=render,args=(key,command,plan,name,cancel),daemon=True).start()
                 return self.respond(202, {'id': key})
             self.respond(404, {'error': 'Không tìm thấy.'})
         except ai33_audio.AudioError as error:
@@ -371,7 +411,7 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as error:
             self.respond(400, {'error': str(error)})
         except (KeyError, TypeError, subprocess.SubprocessError):
-            self.respond(400, {'error': 'Dữ liệu không hợp lệ. Dùng clip video tối đa 180 giây.'})
+            self.respond(400, {'error': 'Dữ liệu không hợp lệ. Dùng clip video tối đa 30 phút.'})
 
 
 if __name__ == '__main__':

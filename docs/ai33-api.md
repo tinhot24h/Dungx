@@ -53,3 +53,7 @@ Unit tests use HTTP response fixtures matching the screenshots. A separate local
 Thư viện giọng tự tải nhiều trang (100 giọng/trang yêu cầu, tôn trọng page_size trả về, dừng khi trang trống). Giữ file_name đã gửi cùng task_id trong catalog cục bộ; không lưu key/link có chữ ký. MP3 có thể chọn sang trình dựng hoặc nhập thủ công.
 
 Download gửi Accept audio, User-Agent và Referer ai33; giữ xác minh TLS và proxy. Lỗi HTTP có mã AUDIO_HTTP_*, TLS/mạng/định dạng được tách riêng. Khi done, UI cung cấp link gốc từ tác vụ xác thực để người dùng mở bằng trình duyệt và nhập file; không tạo lại TTS. Chưa chứng minh nguyên nhân lỗi tải thật nếu chưa có phản hồi CDN của tài khoản.
+
+## Thay đổi 0.8
+
+Key input tự tải giọng/lịch sử sau debounce 800 ms hoặc blur. Phản hồi cũ khi đổi tài khoản bị bỏ qua. Lịch sử cập nhật theo trang hiện tại mỗi 30 giây khi tab audio đang hiển thị, sau tạo và cache audio. Không tự tải hàng loạt file hoặc gửi TTS mới.

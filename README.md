@@ -1,8 +1,16 @@
-# Review Studio 0.7
+# Review Studio 0.8
 
 Dựng video review 9:16, dịch văn bản Trung qua thủ công/Gemini/OpenAI, tạo giọng đọc qua ai33.pro.
 
-**[Tải bản 0.7](https://github.com/tinhot24h/Dungx/raw/refs/heads/main/ReviewStudio-v0.7.zip)** · Cài/chạy: `HUONG_DAN.txt`.
+**[Tải bản 0.8](https://github.com/tinhot24h/Dungx/raw/refs/heads/main/ReviewStudio-v0.8.zip)** · Cài/chạy: `HUONG_DAN.txt`.
+
+## Mới trong 0.8
+
+- Timeline chung với thước thời gian, ảnh nhỏ video và sóng âm MP3 tạo cục bộ. Zoom 1–12×, kéo đầu phát, tua từng khung hình; kéo mép để cắt hoặc kéo thân MP3 để đổi thời điểm vào. Sóng âm hiển thị tương đối theo track, không tự tăng âm lượng nguồn.
+- Chọn track rồi dùng thanh tốc độ/âm lượng hoặc mở **Nhập số chính xác**. Hai nút cắt trước/sau đầu phát, bám mốc, hoàn tác/làm lại tối đa 60 bước chỉnh track. ←/→ từng khung hình, Shift = 10 khung; Space phát/dừng khi focus timeline. Mỗi track vẫn giữ một đoạn liên tục, chưa có tách/ghép nhiều đoạn.
+- Chữ có **căn dọc trên/giữa/dưới trong hộp**. Đặt H lớn hơn chiều cao chữ để thấy khác biệt; H = 0 tự động vừa chữ. Tính toán dùng chung preview/MP4.
+- Nhập API key xong: tự tải giọng và trang lịch sử hiện tại, không cần bấm tải. Lịch sử tự làm mới mỗi 30 giây khi tab Âm thanh ai33 đang hiển thị, sau tạo/lấy audio; vẫn có nút làm mới và phân trang. Thẻ tác vụ hoàn tất có **Lấy audio đã tạo**; chỉ truy vấn/cache tác vụ cũ, không gọi TTS mới. Không tải hàng loạt MP3 tự động.
+- **Hủy xuất video** dừng tiến trình FFmpeg hoặc hủy lượt đang chờ; xóa file xuất dở, giữ nguồn/thiết kế. Chờ thông báo đã hủy rồi chỉnh và xuất lại. Nút này chỉ hủy dựng video cục bộ, không hủy tác vụ TTS ai33.
 
 ## Mới: Âm thanh ai33
 
@@ -75,6 +83,14 @@ Xem trước phát hai track theo cắt/tốc độ/trễ đã chọn; duyệt l
 
 Nếu ai33 đã tạo xong nhưng tool không tải được: chọn đúng task_id/lịch sử và bấm **Kiểm tra tiến độ** để lấy link mới. Lỗi mới có mã HTTP/mạng/TLS/định dạng để chẩn đoán. Nút **Mở audio gốc bằng trình duyệt** cho phép lưu rồi nhập MP3 thủ công; không bấm Tạo audio lại. Chưa xác minh tải từ CDN thật của tài khoản bạn vì môi trường kiểm thử không có key và không truy cập được host ai33.
 
+## Đề xuất nâng cấp tiếp theo (chưa triển khai)
+
+1. **Ưu tiên cao:** tách một clip thành nhiều đoạn, xóa phần giữa và đóng khoảng trống; nhiều MP3/video trên timeline. Hiện chỉ giữ một đoạn liên tục mỗi track.
+2. **Cắt tiếng thừa:** đánh dấu khoảng lặng theo ngưỡng và nghe thử trước khi cắt; fade in/out, crossfade, đo âm lượng để ghép lời đọc mượt hơn.
+3. **Lưu dự án đầy đủ:** mở lại timeline/thiết kế/nguồn, đóng gói dự án chuyển máy; thêm preset mẫu review/tin tức theo sản phẩm.
+4. **Phụ đề:** nhập SRT Việt, chỉnh thời điểm và tô sáng từ đang đọc; nhận dạng giọng nói là bước riêng, cần chọn máy cục bộ hoặc API.
+5. **Xuất nhiều video:** hàng đợi có tiến độ từng clip, hủy từng lượt, preset chất lượng và tùy chọn GPU khi máy hỗ trợ.
+
 ## Chạy và cập nhật
 
 Cần Python 3.11+, FFmpeg/FFprobe với libx264/drawtext, libmp3lame cho MP3. Không cài pip/npm/SDK dịch vụ. Python/FFmpeg không kèm ZIP; chưa phải EXE.
@@ -95,6 +111,8 @@ Chỉ dùng cục bộ với Host/Origin localhost; chưa có xác thực, dọn
 
 ## Kiểm chứng
 
+0.8: 44 kiểm thử Python; FFmpeg thật tạo ảnh nhỏ/sóng âm, xuất và hủy rồi xuất lại. Chromium kiểm tra timeline chung, kéo MP3, thanh tốc độ, undo/redo, zoom, căn dọc, tự tải giọng/lịch sử với phản hồi API giả lập, xóa key và bố cục 320/390px. Chưa thử trực tiếp Windows/macOS hoặc AI33 thật.
+
 AI33: kiểm tra HTTP giả lập đúng API v3/v1 do người dùng cung cấp; key/header/multipart, phân trang giọng, trạng thái doing/done/error, credit/history, không retry tạo, không lộ key. FFmpeg đã chuyển WAV mẫu thành MP3 thật, FFprobe xác minh, Chromium phát/tua/download MP3 qua Range 206/416, khôi phục cache sau reload và không lưu key; bố cục 390/320px. Chưa gọi ai33 thật vì không có key và mạng môi trường chặn host; cần thử synthesis thực với tài khoản có quyền/credit.
 
 Đã kiểm tra luồng thủ công thực qua HTTP và Chromium: không cần key, không gọi API, tạo/sao chép câu lệnh, nhập JSON thường/có code fence, từ chối JSON sai mà giữ bản cũ, xuất TXT. Gemini/OpenAI được kiểm tra bằng HTTP giả lập: định dạng request, provider/key tách biệt, hết quota không fallback/không retry, không lộ key trong URL/prompt/localStorage. Chưa gọi hai API thật vì máy kiểm tra không có key; chưa xác minh tài khoản/model cụ thể được miễn phí. Chưa chạy trực tiếp Windows/macOS.
@@ -105,6 +123,7 @@ node --check studio.js
 node --check ai_ui.js
 node --check audio_ui.js
 node --check editor_ui.js
+node --check timeline_ui.js
 python3 build_package.py
 ```
 

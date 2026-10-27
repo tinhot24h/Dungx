@@ -110,7 +110,7 @@ def build(folder,opts,video_path,video,audio_path=None,audio=None,frame_path=Non
             for wi,run in enumerate(runs):
                 if not run['text'].strip():continue
                 filename=f'{item["key"]}-{li}-{wi}.txt';(folder/filename).write_text(run['text'],encoding='utf-8')
-                textfilters.append(f'drawtext=fontfile={font}:textfile={filename}:expansion=none:fontsize={item["size"]*scale}:fontcolor={item["color"].replace("#","0x")}:x={run["x"]*scale}:y={(item["y"]+li*(item["size"]+item["gap"]))*scale}:borderw={round(item["outline"]*scale)}:bordercolor={item["outline_color"].replace("#","0x")}')
+                textfilters.append(f'drawtext=fontfile={font}:textfile={filename}:expansion=none:fontsize={item["size"]*scale}:fontcolor={item["color"].replace("#","0x")}:x={run["x"]*scale}:y={(item.get("content_y",item["y"])+li*(item["size"]+item["gap"]))*scale}:borderw={round(item["outline"]*scale)}:bordercolor={item["outline_color"].replace("#","0x")}')
     graph.append(f'[{top}]'+(','.join(textfilters) if textfilters else 'null')+',format=yuv420p[out]')
     labels=[]
     if video['has_audio'] and (not p['active_audio'] or p['audio_mode']=='mix'):

@@ -1,7 +1,7 @@
-REVIEW STUDIO 0.7 — VIDEO / DỊCH AI / ÂM THANH AI33
+REVIEW STUDIO 0.8 — VIDEO / DỊCH AI / ÂM THANH AI33
 
 CẬP NHẬT
-Đóng bản cũ, giải nén toàn bộ ReviewStudio-v0.7.zip vào thư mục mới có
+Đóng bản cũ, giải nén toàn bộ ReviewStudio-v0.8.zip vào thư mục mới có
 quyền ghi. Không chạy từ trong ZIP. Đã có Python/FFmpeg thì không cần
 cài lại. Thiết kế px bản 0.4 dùng lại nếu cùng trình duyệt/địa chỉ/cổng.
 PNG thuộc thư mục cũ cần tải lại khi chuyển thư mục.
@@ -167,3 +167,24 @@ Danh sách giọng tự tải các trang cho nhà cung cấp/bộ lọc hiện t
 Tên gửi ai33, tên MP3 và task_id được giữ để đối chiếu. Tác vụ cũ thiếu
 tên từ API sẽ dùng task_id. Nút Dùng MP3 này trong video chọn audio
 đã tạo vào trình dựng; không cần tải về rồi nhập lại.
+
+NÂNG CẤP 0.8 — TIMELINE TRỰC QUAN
+Ảnh nhỏ video và sóng âm MP3 tạo trên máy, không tải lên dịch vụ.
+Zoom timeline 1–12x; bấm/kéo đầu phát để tua. Kéo mép clip để cắt,
+kéo thân MP3 để đổi thời điểm vào. Chọn track, chỉnh tốc độ/âm lượng
+bằng thanh trượt hoặc bấm Nhập số chính xác. Cắt trước/sau đầu phát,
+hoàn tác/làm lại tối đa 60 bước chỉnh track (không bao gồm thiết kế).
+Focus timeline: trái/phải từng khung hình, Shift=10 khung, Space phát/dừng.
+Sóng âm phóng theo biên độ tương đối để dễ nhìn, không đổi âm lượng.
+Mỗi track giữ một đoạn liên tục; chưa tách/ghép nhiều đoạn giữa nguồn.
+
+Tiêu đề/nội dung: chọn Căn dọc trong hộp Trên/Giữa/Dưới; đặt H lớn
+hơn chiều cao chữ để thấy hiệu ứng. H=0 tự vừa nội dung.
+
+Nhập key ai33 xong tự tải giọng và lịch sử; lịch sử cập nhật 30 giây
+khi tab Âm thanh ai33 đang hiển thị và sau tạo/lấy audio. Thẻ lịch sử
+có Lấy audio đã tạo: không tạo lại TTS. Không tự tải mọi MP3 về máy.
+Key chỉ giữ trong phiên. Đổi/xóa key sẽ xóa danh sách lịch sử đang xem.
+
+Khi xuất, bấm Hủy xuất video để dừng FFmpeg/bỏ lượt chờ và file dở.
+Đợi báo Đã hủy rồi xuất lại. Giữ nguồn/thiết kế, không hủy tác vụ ai33.
