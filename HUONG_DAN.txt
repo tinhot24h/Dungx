@@ -1,0 +1,64 @@
+REVIEW STUDIO — BẢN CHẠY THỬ TRÊN MÁY CÁ NHÂN
+
+1. Giải nén toàn bộ ReviewStudio.zip ra một thư mục có quyền ghi.
+   Không chạy trực tiếp từ bên trong file ZIP.
+
+2. Cài một lần: Python 3.11 trở lên và FFmpeg (có cả ffprobe).
+   Không cần pip, npm, tài khoản hay API key.
+   Font tiếng Việt đã kèm theo trong thư mục assets.
+
+WINDOWS 10/11
+Mở PowerShell, cài bằng Windows Package Manager (winget):
+  winget install --exact --id Python.Python.3.12
+  winget install --exact --id Gyan.FFmpeg
+Sau khi cài, đóng rồi mở lại cửa sổ terminal/File Explorer để nhận PATH.
+Nhấp đúp START_WINDOWS.bat trong thư mục đã giải nén.
+Nếu máy không có winget, cài Python từ https://www.python.org/downloads/
+(đánh dấu Add Python to PATH) và FFmpeg qua https://ffmpeg.org/download.html.
+Với FFmpeg dạng ZIP, có thể chép ffmpeg.exe và ffprobe.exe vào thư mục bin
+nằm cùng cấp với launch.py; ứng dụng sẽ tự tìm ở đó.
+
+MACOS
+Nếu đã dùng Homebrew, mở Terminal:
+  brew install python ffmpeg
+Trong Terminal, vào thư mục vừa giải nén rồi chạy:
+  python3 launch.py
+Hoặc cấp quyền và chạy START_MAC_LINUX.command:
+  chmod +x START_MAC_LINUX.command
+  ./START_MAC_LINUX.command
+
+UBUNTU / DEBIAN
+  sudo apt update
+  sudo apt install python3 ffmpeg
+Python phải từ 3.11 trở lên (ví dụ Ubuntu 24.04 hoặc Debian 12 trở lên).
+Trong thư mục đã giải nén:
+  python3 launch.py
+
+3. Trình duyệt sẽ tự mở http://127.0.0.1:8000.
+   Nếu không tự mở, nhập địa chỉ trên vào Chrome/Edge/Safari.
+   Giữ cửa sổ dòng lệnh mở trong suốt quá trình dùng.
+
+4. Chọn clip -> điền tiêu đề, mô tả, CTA -> chọn màu -> Xuất video MP4.
+   Chờ báo sẵn sàng rồi nhấn Tải video về máy.
+   Giới hạn: 100 MB, 180 giây. MP4 H.264 được khuyến nghị.
+   Kết quả: 720x1280, giữ toàn bộ hình và âm thanh gốc.
+   Chữ và watermark có sẵn trên clip sẽ vẫn còn.
+   Bản này chưa tạo giọng đọc AI, cảnh AI hoặc tự đăng TikTok.
+
+5. Nhấn Ctrl+C trong cửa sổ dòng lệnh để dừng.
+   Tải kết quả về trước khi dừng: trạng thái tác vụ mất sau khi khởi động lại.
+   Video tải lên/kết quả lưu tại .local trong thư mục ứng dụng.
+   Có thể xóa .local khi ứng dụng đã dừng và bạn đã tải kết quả cần giữ.
+
+KHẮC PHỤC NHANH
+- Báo thiếu FFmpeg: kiểm tra ffmpeg -version và ffprobe -version trong terminal.
+- Báo cổng 8000 bận: đóng phiên ứng dụng cũ, hoặc đổi cổng:
+  PowerShell: $env:PORT='8001'; python launch.py
+  macOS/Linux: PORT=8001 python3 launch.py
+- Nếu xuất lỗi: thử clip MP4 H.264 ngắn hơn và giảm nội dung chữ.
+- Chỉ dùng cục bộ; bản này chưa có đăng nhập, giới hạn hàng đợi hay tự dọn ổ đĩa.
+
+ĐÃ KIỂM TRA
+Ứng dụng được thử xuất MP4 có âm thanh và thao tác trên Chromium tại Linux.
+Chưa chạy thử trực tiếp trên Windows/macOS. Đây là gói mã nguồn có trình
+khởi động, không phải file EXE và không kèm Python/FFmpeg.
