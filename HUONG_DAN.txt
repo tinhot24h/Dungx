@@ -1,77 +1,87 @@
-REVIEW STUDIO 0.2 — BẢN CHẠY THỬ TRÊN MÁY CÁ NHÂN
+REVIEW STUDIO 0.3 — THIẾT KẾ NỀN, KHUNG PNG, CHỮ VÀ VIDEO
 
-1. Giải nén toàn bộ ReviewStudio-v0.2.zip ra một thư mục có quyền ghi.
-   Không chạy trực tiếp từ bên trong file ZIP.
+CẬP NHẬT TỪ BẢN CŨ
+Đóng ứng dụng cũ. Giải nén toàn bộ ReviewStudio-v0.3.zip vào thư mục mới
+có quyền ghi. Không chạy trực tiếp từ trong ZIP. Nếu đã cài Python và
+FFmpeg thì không cần cài lại; chuyển xuống mục CHẠY.
 
-2. Cài một lần: Python 3.11 trở lên và FFmpeg (có cả ffprobe).
-   Không cần pip, npm, tài khoản hay API key.
-   Font tiếng Việt đã kèm theo trong thư mục assets.
+CÀI MỘT LẦN
+Cần Python 3.11+ và FFmpeg (có ffprobe, drawtext, libx264).
+Không cần pip, npm, API key. Font tiếng Việt đã kèm theo.
 
-WINDOWS 10/11
-Mở PowerShell, cài bằng Windows Package Manager (winget):
+Windows 10/11, PowerShell:
   winget install --exact --id Python.Python.3.12
   winget install --exact --id Gyan.FFmpeg
-Sau khi cài, đóng rồi mở lại cửa sổ terminal/File Explorer để nhận PATH.
-Nhấp đúp START_WINDOWS.bat trong thư mục đã giải nén.
-Nếu máy không có winget, cài Python từ https://www.python.org/downloads/
-(đánh dấu Add Python to PATH) và FFmpeg qua https://ffmpeg.org/download.html.
-Với FFmpeg dạng ZIP, có thể chép ffmpeg.exe và ffprobe.exe vào thư mục bin
-nằm cùng cấp với launch.py; ứng dụng sẽ tự tìm ở đó.
+Đóng/mở lại terminal hoặc File Explorer để nhận PATH sau khi cài.
+Không có winget: cài Python từ https://www.python.org/downloads/
+(chọn Add Python to PATH), FFmpeg từ https://ffmpeg.org/download.html.
+Có thể đặt ffmpeg.exe và ffprobe.exe vào thư mục bin cạnh launch.py.
 
-MACOS
-Nếu đã dùng Homebrew, mở Terminal:
+macOS đã có Homebrew:
   brew install python ffmpeg
-Trong Terminal, vào thư mục vừa giải nén rồi chạy:
-  python3 launch.py
-Hoặc cấp quyền và chạy START_MAC_LINUX.command:
-  chmod +x START_MAC_LINUX.command
-  ./START_MAC_LINUX.command
 
-UBUNTU / DEBIAN
+Ubuntu 24.04 / Debian 12 hoặc mới hơn:
   sudo apt update
   sudo apt install python3 ffmpeg
-Python phải từ 3.11 trở lên (ví dụ Ubuntu 24.04 hoặc Debian 12 trở lên).
-Trong thư mục đã giải nén:
+
+CHẠY
+Windows: nhấp đúp START_WINDOWS.bat.
+macOS/Linux: vào thư mục đã giải nén trong Terminal, chạy:
   python3 launch.py
+Hoặc cấp quyền/chạy START_MAC_LINUX.command:
+  chmod +x START_MAC_LINUX.command
+  ./START_MAC_LINUX.command
+Trình duyệt tự mở http://127.0.0.1:8000. Nếu không tự mở, nhập địa chỉ đó.
+Giữ cửa sổ dòng lệnh mở khi dùng. Ctrl+C để dừng.
 
-3. Trình duyệt sẽ tự mở http://127.0.0.1:8000.
-   Nếu không tự mở, nhập địa chỉ trên vào Chrome/Edge/Safari.
-   Giữ cửa sổ dòng lệnh mở trong suốt quá trình dùng.
+DÙNG THỬ
+1. Chọn clip tối đa 100 MB, 180 giây. MP4 H.264 được khuyến nghị.
+2. Điền tiêu đề/nội dung, Enter để chủ động xuống dòng.
+3. Chọn mẫu hồng/xanh, sau đó chỉnh từng tab:
+   NỀN: màu gợi ý, màu tùy chọn, một màu/chuyển hai màu, vùng hòa nền.
+   KHUNG: 6 kiểu có sẵn, không khung hoặc PNG từ máy. Đổi màu, vị trí,
+   độ đục và kích thước khung. Độ bóng chỉ áp dụng khung hồng.
+   TIÊU ĐỀ/NỘI DUNG: font, màu, cỡ, vị trí, độ rộng, căn dòng, viền chữ.
+   VIDEO: phóng to/thu nhỏ, dịch ngang/dọc, nút đưa về giữa.
+4. Kéo trực tiếp: chọn lớp cần di chuyển trong hộp dưới bản xem trước
+   rồi kéo trên hình. Khung và từng phần chữ di chuyển riêng.
+5. Bấm Xuất MP4, chờ sẵn sàng rồi bấm Tải video về máy.
+   Kết quả 720x1280, giữ âm thanh gốc. Bản này đã bỏ CTA.
 
-4. Chọn clip -> điền tiêu đề, mô tả, CTA -> chọn màu -> Xuất video MP4.
-   Chờ báo sẵn sàng rồi nhấn Tải video về máy.
-   Giới hạn: 100 MB, 180 giây. MP4 H.264 được khuyến nghị.
-   Kết quả: 720x1280, phóng hình phủ khung dọc và giữ âm thanh gốc.
-   Hình khác tỷ lệ có thể bị cắt. Dùng Phóng to/Căn video để điều chỉnh.
-   Chữ và watermark có sẵn trên clip sẽ vẫn còn.
-   Bản này chưa tạo giọng đọc AI, cảnh AI hoặc tự đăng TikTok.
+KHUNG PNG
+Tải tại tab Khung. Giới hạn 5 MB, mỗi cạnh tối đa 4096 px,
+tổng tối đa 8 triệu điểm ảnh. Nên dùng PNG có vùng giữa trong suốt.
+Ảnh giữ nguyên tỷ lệ và căn giữa trong hộp khung, không bị kéo méo.
+Khung tùy chỉnh giữ màu của PNG; điều khiển màu trong/viền chỉ dành
+cho khung dựng sẵn. PNG động chỉ lấy hình đầu, không phát chuyển động.
+Sau khi tải, chỉnh hộp khung rồi đặt chữ vào đúng vùng trống của ảnh.
 
-5. Nhấn Ctrl+C trong cửa sổ dòng lệnh để dừng.
-   Tải kết quả về trước khi dừng: trạng thái tác vụ mất sau khi khởi động lại.
-   Video tải lên/kết quả lưu tại .local trong thư mục ứng dụng.
-   Có thể xóa .local khi ứng dụng đã dừng và bạn đã tải kết quả cần giữ.
+LƯU Ý
+- Đổi khung hoặc kéo khung không tự kéo chữ theo.
+- Chữ vượt khung hình sẽ báo lỗi: giảm cỡ, tăng độ rộng hoặc kéo lên.
+- Nếu chữ ra ngoài khung trang trí nhưng vẫn trong video, ứng dụng vẫn
+  cho xuất. Hãy kiểm tra bố cục trước khi xuất.
+- Video khác tỷ lệ bị cắt về 9:16 trước khi phóng/di chuyển. Thu nhỏ
+  hoặc dịch video sẽ để lộ màu nền ở chỗ trống.
+- Chữ và watermark có sẵn trên clip được giữ nguyên.
+- Không có giọng đọc AI, ghép nhiều clip hoặc tự đăng TikTok.
+- Chỉ dùng cục bộ; chưa có đăng nhập và tự dọn ổ đĩa.
 
-KHẮC PHỤC NHANH
-- Báo thiếu FFmpeg: kiểm tra ffmpeg -version và ffprobe -version trong terminal.
-- Báo cổng 8000 bận: đóng phiên ứng dụng cũ, hoặc đổi cổng:
+DỮ LIỆU
+Thiết kế tự lưu trên trình duyệt này. Clip/PNG/kết quả ở .local trong
+thư mục ứng dụng, không đưa lên dịch vụ bên ngoài. Khi đổi thư mục/máy,
+có thể cần tải lại khung PNG. Tải kết quả cần giữ trước khi đóng máy chủ.
+Chỉ xóa .local khi ứng dụng đã dừng và đã giữ các tệp cần thiết.
+
+KHẮC PHỤC
+Thiếu FFmpeg: thử ffmpeg -version và ffprobe -version trong terminal.
+Cổng 8000 bận: đóng bản cũ hoặc chọn cổng khác:
   PowerShell: $env:PORT='8001'; python launch.py
   macOS/Linux: PORT=8001 python3 launch.py
-- Nếu xuất lỗi: thử clip MP4 H.264 ngắn hơn và giảm nội dung chữ.
-- Chỉ dùng cục bộ; bản này chưa có đăng nhập, giới hạn hàng đợi hay tự dọn ổ đĩa.
+PNG lỗi: xuất lại thành PNG tĩnh đúng kích thước cho phép.
+Xuất video lỗi: thử MP4 H.264 ngắn hơn, giảm nội dung chữ.
 
 ĐÃ KIỂM TRA
-Ứng dụng được thử xuất MP4 có âm thanh và thao tác trên Chromium tại Linux.
-Chưa chạy thử trực tiếp trên Windows/macOS. Đây là gói mã nguồn có trình
-khởi động, không phải file EXE và không kèm Python/FFmpeg.
-
-THỬ NHANH PHẦN HÒA NỀN MỚI
-- Chọn mẫu Mỹ phẩm hồng hoặc Gia dụng xanh.
-- Bắt đầu hòa nền: vị trí tính từ đỉnh video (phần trăm chiều cao).
-- Chiều cao vùng chuyển: độ dài đoạn màu từ trong suốt sang đục.
-- Độ đục nền phía dưới: 100% che hẳn hình; giảm để thấy hình phía sau.
-- Vị trí khung/chữ: di chuyển riêng, không thay đổi lớp hòa nền.
-- Độ bóng: điều chỉnh vệt sáng phía trên trong khung hồng.
-- Thiết kế tự lưu trên trình duyệt. Nút Khôi phục đưa về thông số mẫu.
-- Clip đã có chữ/khung vẫn giữ chữ/khung cũ; nên dùng clip gốc sạch chữ.
-- Để cập nhật từ bản cũ: dừng ứng dụng cũ, giải nén bản mới vào thư mục
-  mới rồi chạy. Không cần gỡ hoặc cài lại Python/FFmpeg đã có.
+Đã thử chức năng trên Linux/Chromium và bản ZIP giải nén.
+Chưa thử trực tiếp Windows/macOS. Đây là gói mã nguồn có trình khởi
+động; chưa phải EXE và không kèm Python/FFmpeg.

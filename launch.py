@@ -26,7 +26,8 @@ def main():
                               capture_output=True, text=True, check=True, timeout=20)
     if 'drawtext' not in filters.stdout or 'libx264' not in encoders.stdout:
         raise RuntimeError('Ban FFmpeg can co drawtext va libx264. Xem HUONG_DAN.txt.')
-    for font in ('DejaVuSans.ttf', 'DejaVuSans-Bold.ttf'):
+    for font in ('DejaVuSans.ttf', 'DejaVuSans-Bold.ttf', 'DejaVuSerif.ttf',
+                 'DejaVuSerif-Bold.ttf', 'DejaVuSansMono.ttf', 'DejaVuSansMono-Bold.ttf'):
         if not (ROOT / 'assets' / font).is_file():
             raise RuntimeError('Thieu phong chu. Hay giai nen toan bo ZIP vao mot thu muc.')
     port = int(os.environ.get('PORT', '8000'))

@@ -5,22 +5,24 @@ import os
 import re
 import subprocess
 import threading
-import textwrap
+import struct
+import shutil
+import unicodedata
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
-from design import settings, layout, artwork
+from design import settings, layout, artwork, frame_box
+from fonts import FONTS
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / '.local'
 DATA.mkdir(exist_ok=True)
+FRAMES = DATA / 'frames'
+FRAMES.mkdir(exist_ok=True)
 JOBS = {}
 LOCK = threading.Lock()
 RENDER_LOCK = threading.Lock()
-# Relative to .local/<job-id>/; forward slashes also work in FFmpeg on Windows.
-FONT = '../../assets/DejaVuSans.ttf'
-BOLD = '../../assets/DejaVuSans-Bold.ttf'
 
 
 def probe(path):
@@ -38,13 +40,13 @@ def probe(path):
 
 def validate_options(opts):
     opts = settings(opts)
-    for field, limit in [('title', 72), ('body', 210), ('cta', 38)]:
+    for field, limit in [('title', 160), ('body', 600)]:
         value = opts.get(field)
-        if not isinstance(value, str) or len(value) > limit or (field != 'cta' and not value.strip()):
+        if not isinstance(value, str) or len(value) > limit or not value.strip():
             raise ValueError(f'Nội dung {field} không hợp lệ (tối đa {limit} ký tự).')
-        opts[field] = ' '.join(value.split())
-    if not isinstance(opts.get('color'), str) or not re.fullmatch(r'#[0-9a-fA-F]{6}', opts['color']):
-        raise ValueError('Màu không hợp lệ.')
+        opts[field] = unicodedata.normalize('NFC', '\n'.join(' '.join(line.split()) for line in value.splitlines()))
+    if opts['frame_style'] == 'custom' and not (FRAMES / (opts['frame_id']+'.png')).is_file():
+        raise ValueError('Khung PNG không còn trong ứng dụng này. Hãy tải lại khung.')
     layout(opts)
     return opts
 
@@ -53,25 +55,46 @@ def compose(folder, options):
     (folder / 'overlay.png').write_bytes(artwork(options))
     filters = []
     for item in layout(options):
-        font = BOLD if item['bold'] else FONT
-        for line_number, line in enumerate(item['text'].splitlines()):
+        font = '../../assets/' + FONTS[item['font']][0]
+        for line_number, line in enumerate(item['lines']):
+            if not line.strip():
+                continue
             filename = f"{item['key']}-{line_number}.txt"
             (folder / filename).write_text(line, encoding='utf-8')
-            y = item['y'] + line_number*(item['size']+3)
+            y = item['y'] + line_number*(item['size']+item['gap'])
             filters.append(f"drawtext=fontfile={font}:textfile={filename}:expansion=none:"
                            f"fontsize={item['size']}:fontcolor={item['color'].replace('#','0x')}:"
-                           f"x=(w-tw)/2:y={y}:"
-                           f"borderw={item['outline']}:bordercolor=0x342333@0.8")
+                           f"x={item['line_x'][line_number]}:y={y}:"
+                           f"borderw={item['outline']}:bordercolor={item['outline_color'].replace('#','0x')}")
     zoom = options['zoom']/100
     width = round(720*zoom/2)*2
     height = round(1280*zoom/2)*2
-    focus = options['focus']/100
-    vf = (f"[0:v]scale={width}:{height}:force_original_aspect_ratio=increase,"
-          f"crop=720:1280:(iw-720)/2:(ih-1280)*{focus},setsar=1[clip];"
-          "[clip][1:v]overlay=0:0:format=auto," + ','.join(filters) + '[out]')
+    x = round((720-width)/2+720*options['video_x']/100)
+    y = round((1280-height)/2+1280*options['video_y']/100)
+    color = options['color'].replace('#','0x')
+    graph = (f"[0:v]split[src][bg];[bg]scale=720:1280,setsar=1,"
+             f"drawbox=color={color}:t=fill[base];"
+             f"[src]scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,"
+             f"scale={width}:{height},setsar=1[clip];"
+             f"[base][clip]overlay={x}:{y}:shortest=1[placed];"
+             "[placed][1:v]overlay=0:0:format=auto[design];")
+    extra = []
+    if options['frame_style'] == 'custom':
+        shutil.copyfile(FRAMES / (options['frame_id']+'.png'),folder/'frame.png')
+        box = frame_box(options)
+        w,h = box['width'],box['height']
+        extra = ['-i','frame.png']
+        graph += (f"[2:v]scale={w}:{h}:force_original_aspect_ratio=decrease,"
+                  f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=0x00000000,format=rgba,"
+                  f"colorchannelmixer=aa={options['frame_opacity']/100}[custom];"
+                  f"[design][custom]overlay={box['x']}:{box['y']}:format=auto[framed];")
+        top = 'framed'
+    else:
+        top = 'design'
+    graph += f"[{top}]" + ','.join(filters) + '[out]'
     return ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
-            '-i', 'source', '-i', 'overlay.png', '-filter_complex_threads', '1',
-            '-filter_complex', vf, '-map', '[out]', '-map', '0:a:0?',
+            '-i', 'source', '-i', 'overlay.png', *extra, '-filter_complex_threads', '1',
+            '-filter_complex', graph, '-map', '[out]', '-map', '0:a:0?',
             '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22', '-threads', '2',
             '-r', '30', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k',
             '-movflags', '+faststart', 'review.mp4']
@@ -106,8 +129,11 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == '/':
             return self.respond(200, (ROOT / 'index.html').read_bytes(), 'text/html; charset=utf-8')
-        if path in ('/assets/DejaVuSans.ttf', '/assets/DejaVuSans-Bold.ttf'):
+        if path in ('/assets/'+font[0] for font in FONTS.values()):
             return self.respond(200, (ROOT / path.lstrip('/')).read_bytes(), 'font/ttf')
+        match = re.fullmatch(r'/frames/([a-f0-9]{32})', path)
+        if match and (FRAMES / (match[1]+'.png')).is_file():
+            return self.respond(200, (FRAMES / (match[1]+'.png')).read_bytes(), 'image/png')
         if path == '/health':
             return self.respond(200, {'status': 'ok'})
         match = re.fullmatch(r'/(jobs|download)/([a-f0-9]{32})', path)
@@ -134,6 +160,28 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         try:
             size = int(self.headers.get('Content-Length', '0'))
+            if path == '/frame-upload':
+                if not 0 < size <= 5*1024*1024:
+                    return self.respond(413, {'error': 'Khung PNG tối đa 5 MB.'})
+                data = self.rfile.read(size)
+                if len(data) != size or data[:8] != b'\x89PNG\r\n\x1a\n' or data[12:16] != b'IHDR' or len(data)<33:
+                    raise ValueError('Tệp không phải PNG hợp lệ.')
+                width, height = struct.unpack('!II',data[16:24])
+                if not 0 < width <= 4096 or not 0 < height <= 4096 or width*height>8000000:
+                    raise ValueError('PNG tối đa 4096 px mỗi cạnh và 8 triệu điểm ảnh.')
+                key = uuid.uuid4().hex
+                source, target = FRAMES/(key+'-upload.png'), FRAMES/(key+'.png')
+                source.write_bytes(data)
+                try:
+                    subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-nostdin','-y',
+                                    '-f','image2','-c:v','png','-i',str(source),'-frames:v','1',
+                                    '-vf','format=rgba',str(target)],capture_output=True,check=True,timeout=25)
+                except subprocess.SubprocessError:
+                    target.unlink(missing_ok=True)
+                    raise ValueError('Không đọc được PNG. Hãy xuất lại dưới dạng PNG tĩnh.')
+                finally:
+                    source.unlink(missing_ok=True)
+                return self.respond(200, {'id': key,'url':'/frames/'+key,'width':width,'height':height})
             if path == '/upload':
                 if not 0 < size <= 100 * 1024 * 1024:
                     return self.respond(413, {'error': 'Chọn video có dung lượng tối đa 100 MB.'})
@@ -154,8 +202,12 @@ class Handler(BaseHTTPRequestHandler):
                 if not 0 < size <= 8192:
                     raise ValueError('Yêu cầu không hợp lệ.')
                 opts = validate_options(json.loads(self.rfile.read(size)))
-                return self.respond(200, {'image': 'data:image/png;base64,' +
-                                         base64.b64encode(artwork(opts)).decode(), 'text': layout(opts)})
+                custom = None
+                if opts['frame_style'] == 'custom':
+                    custom = dict(url='/frames/'+opts['frame_id'],**frame_box(opts),opacity=opts['frame_opacity']/100)
+                return self.respond(200, {'image':'data:image/png;base64,'+
+                                         base64.b64encode(artwork(opts)).decode(),
+                                         'text':layout(opts),'custom':custom,'frame':frame_box(opts)})
             if path == '/render':
                 if not 0 < size <= 8192:
                     raise ValueError('Yêu cầu không hợp lệ.')
