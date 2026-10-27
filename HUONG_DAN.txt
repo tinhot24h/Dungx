@@ -1,6 +1,6 @@
-REVIEW STUDIO — BẢN CHẠY THỬ TRÊN MÁY CÁ NHÂN
+REVIEW STUDIO 0.2 — BẢN CHẠY THỬ TRÊN MÁY CÁ NHÂN
 
-1. Giải nén toàn bộ ReviewStudio.zip ra một thư mục có quyền ghi.
+1. Giải nén toàn bộ ReviewStudio-v0.2.zip ra một thư mục có quyền ghi.
    Không chạy trực tiếp từ bên trong file ZIP.
 
 2. Cài một lần: Python 3.11 trở lên và FFmpeg (có cả ffprobe).
@@ -41,7 +41,8 @@ Trong thư mục đã giải nén:
 4. Chọn clip -> điền tiêu đề, mô tả, CTA -> chọn màu -> Xuất video MP4.
    Chờ báo sẵn sàng rồi nhấn Tải video về máy.
    Giới hạn: 100 MB, 180 giây. MP4 H.264 được khuyến nghị.
-   Kết quả: 720x1280, giữ toàn bộ hình và âm thanh gốc.
+   Kết quả: 720x1280, phóng hình phủ khung dọc và giữ âm thanh gốc.
+   Hình khác tỷ lệ có thể bị cắt. Dùng Phóng to/Căn video để điều chỉnh.
    Chữ và watermark có sẵn trên clip sẽ vẫn còn.
    Bản này chưa tạo giọng đọc AI, cảnh AI hoặc tự đăng TikTok.
 
@@ -62,3 +63,15 @@ KHẮC PHỤC NHANH
 Ứng dụng được thử xuất MP4 có âm thanh và thao tác trên Chromium tại Linux.
 Chưa chạy thử trực tiếp trên Windows/macOS. Đây là gói mã nguồn có trình
 khởi động, không phải file EXE và không kèm Python/FFmpeg.
+
+THỬ NHANH PHẦN HÒA NỀN MỚI
+- Chọn mẫu Mỹ phẩm hồng hoặc Gia dụng xanh.
+- Bắt đầu hòa nền: vị trí tính từ đỉnh video (phần trăm chiều cao).
+- Chiều cao vùng chuyển: độ dài đoạn màu từ trong suốt sang đục.
+- Độ đục nền phía dưới: 100% che hẳn hình; giảm để thấy hình phía sau.
+- Vị trí khung/chữ: di chuyển riêng, không thay đổi lớp hòa nền.
+- Độ bóng: điều chỉnh vệt sáng phía trên trong khung hồng.
+- Thiết kế tự lưu trên trình duyệt. Nút Khôi phục đưa về thông số mẫu.
+- Clip đã có chữ/khung vẫn giữ chữ/khung cũ; nên dùng clip gốc sạch chữ.
+- Để cập nhật từ bản cũ: dừng ứng dụng cũ, giải nén bản mới vào thư mục
+  mới rồi chạy. Không cần gỡ hoặc cài lại Python/FFmpeg đã có.
