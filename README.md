@@ -1,55 +1,70 @@
-# Review Studio 0.4
+# Review Studio 0.5
 
-Công cụ cục bộ dựng video review 9:16 và biên tập lời tiếng Việt từ văn bản tiếng Trung.
+Dựng video review 9:16, tạo câu lệnh dùng trên AI web hoặc dịch qua Gemini/OpenAI API.
 
-**[Tải bản 0.4](https://github.com/tinhot24h/Dungx/raw/refs/heads/main/ReviewStudio-v0.4.zip)** · Cài/chạy: `HUONG_DAN.txt`.
+**[Tải bản 0.5](https://github.com/tinhot24h/Dungx/raw/refs/heads/main/ReviewStudio-v0.5.zip)** · Cài/chạy: `HUONG_DAN.txt`.
 
-## Hai không gian làm việc
+## Chọn cách dịch
 
-**Dựng video:** giao diện chia nguồn, canvas và bảng thuộc tính. Nhập X/Y/W/H theo pixel thật trên canvas 720×1280. X/Y là góc trên bên trái; nút căn giữa ngang/dọc cho khung, từng hộp chữ và video. Giữ thanh trượt kèm ô số cho các thông số như độ đục/vùng hòa nền. Cỡ chữ 12–144 px, có thể nhập trực tiếp 90 px. W/H video liên kết 9:16 mặc định; bỏ chọn để kéo giãn hình.
+| Chế độ | Cần key? | Cách hoạt động |
+| --- | --- | --- |
+| **Thủ công — mặc định** | Không | Tool ghép nguồn + phong cách thành câu lệnh. Bạn sao chép sang Gemini/ChatGPT web, lấy câu trả lời rồi dán trở lại. Tool không gọi API. Dịch vụ web có hạn mức riêng. |
+| **Gemini API** | Key Google AI Studio | Dịch ngay trong tool. Có thể dùng hạn mức miễn phí nếu dự án/model/tài khoản đủ điều kiện; quota và cước do Google quyết định. Tool không thể khóa mọi lượt gọi ở mức miễn phí. |
+| **OpenAI API** | Key OpenAI | Dịch ngay trong tool, phí API tính riêng với ChatGPT Free/Plus. |
 
-**Dịch & biên tập AI:** dán văn bản Trung → OpenAI trả bản dịch sát nghĩa, bản viết lại và điểm cần kiểm chứng. Chọn Review / Tin tức / Chia sẻ mẹo / Giới thiệu sản phẩm; chọn giọng văn, xưng hô và mục tiêu 15/30/60/90 giây hoặc giữ đủ ý. Sửa hai bản, sao chép hoặc tải TXT UTF-8 để tạo MP3 ở công cụ ngoài. Thời lượng đọc chỉ ước tính 2,8 tiếng/giây. Có thể bôi đen một đoạn tối đa 600 ký tự rồi đưa vào khung nội dung video.
+Tool không tự chuyển provider, không tự thử lại hoặc dùng OpenAI trả phí khi Gemini hết quota. Bạn có thể chủ động đổi về Thủ công. Không tự điều khiển tài khoản web hoặc lấy cookie/token của ChatGPT/Gemini.
 
-**Chưa có tự trích lời từ video, OCR, tạo giọng đọc AI hoặc tạo MP3.** Nguồn dịch hiện là văn bản do bạn dán vào, tối đa 8.000 ký tự.
+## Dùng không cần API
 
-## OpenAI: kết nối và chi phí
+1. Mở **Dịch & biên tập AI**, chọn **Thủ công**.
+2. Dán văn bản Trung (tối đa 8.000 ký tự), chọn Review/Tin tức/Mẹo/Giới thiệu, giọng văn, xưng hô và thời lượng.
+3. Bấm **Tạo câu lệnh** rồi sao chép sang Gemini hoặc ChatGPT web. Link chỉ mở website để bạn tự thao tác.
+4. AI được yêu cầu trả JSON gồm `literal`, `script`, `notes`. Sao chép đủ JSON vào ô kết quả thủ công, bấm nhập. Chấp nhận JSON được bọc trong khối markdown `json`.
+5. Nếu chỉ có văn bản kịch bản, dán trực tiếp vào ô **Kịch bản tiếng Việt**; có thể điền bản dịch sát nghĩa riêng bằng tay.
+6. Sửa, sao chép hoặc tải TXT UTF-8 để tạo MP3 bên ngoài. Bôi đen đoạn tối đa 600 ký tự để đưa lên khung nội dung video.
 
-Ở tab Dịch & biên tập AI, mở Kết nối OpenAI và nhập API key trong ứng dụng, không gửi key trong chat. Key nhập tại giao diện chỉ dùng trong phiên, không lưu vào thiết kế, localStorage hoặc file; tải lại trang cần nhập lại. Có thể thay bằng biến máy chủ `REVIEW_OPENAI_KEY` hoặc `OPENAI_API_KEY`. Model mặc định `gpt-4.1-mini`, có thể đổi trong giao diện hoặc qua `OPENAI_MODEL`; model cần hỗ trợ Responses API và Structured Outputs.
+Tạo câu lệnh và nhập kết quả là xử lý cục bộ, không gọi OpenAI/Gemini API. AI web vẫn cần Internet và có giới hạn do nhà cung cấp áp dụng. Đây là quy trình thủ công, không phải bản dịch tự động chạy offline.
 
-Chỉ khi bấm Dịch & viết lại, ứng dụng gửi văn bản/cấu hình tới `https://api.openai.com/v1/responses` bằng HTTPS, với `store:false`. Không gửi clip hoặc PNG tới OpenAI. Phí API tính riêng với gói ChatGPT và theo tài khoản/key của bạn. Cần Internet tới `api.openai.com`.
+## Gemini API và OpenAI API
 
-Prompt yêu cầu giữ dữ kiện, không tự quy đổi giá hay bịa trải nghiệm/công dụng. Đây là hướng dẫn cho mô hình, không thay thế việc đối chiếu của người dùng. Lỗi key, quyền model, hết hạn mức và mất mạng hiển thị riêng; lỗi không xóa kịch bản trước đó.
+Chọn provider trong giao diện, nhập key ở **Kết nối API**. Key của từng provider giữ riêng trong bộ nhớ phiên; không lưu key trong localStorage, file hay ZIP. Tải lại trang cần nhập lại. Model được lưu riêng theo provider. Không gửi key trong chat.
 
-## Các chức năng dựng video được giữ
+- Gemini: lấy key tại https://aistudio.google.com/apikey. Model gợi ý `gemini-2.5-flash`, có thể thay bằng model tài khoản hỗ trợ. Kiểm tra điều kiện, hạn mức và giá hiện hành tại https://ai.google.dev/gemini-api/docs/pricing. Biến máy chủ: `REVIEW_GEMINI_KEY`, `GEMINI_API_KEY` hoặc `GOOGLE_API_KEY`; model mặc định tùy chọn `GEMINI_MODEL`.
+- OpenAI: https://platform.openai.com/api-keys. Model mặc định `gpt-4.1-mini`, cần Responses API/Structured Outputs. Biến máy chủ: `REVIEW_OPENAI_KEY` hoặc `OPENAI_API_KEY`; model tùy chọn `OPENAI_MODEL`.
 
-- Nền một màu hoặc chuyển hai màu, tám màu gợi ý, lớp hòa nền alpha mềm.
-- Sáu khung dựng sẵn; đổi màu, viền, độ đục, độ bóng của khung hồng. Kính trong là lớp bán trong suốt, không phải blur hậu cảnh.
-- Khung PNG từ máy (tối đa 5 MB, 4096 px/cạnh, 8 triệu điểm ảnh). Giữ tỷ lệ và căn giữa trong hộp; PNG động chỉ lấy hình đầu.
-- Tiêu đề/nội dung chỉnh riêng font, màu, cỡ, vị trí, độ rộng, căn dòng, khoảng dòng và viền. Sáu font từ ba họ Sans/Serif/Mono, có nét thường/đậm, kèm giấy phép trong `assets/`.
-- Kéo trực tiếp bốn lớp; bộ điều khiển phát/tua/tắt tiếng xem trước. Khung/chữ không buộc di chuyển cùng nhau.
-- MP4 H.264/AAC 720×1280, giữ tiếng gốc, không thêm CTA. Clip tối đa 100 MB / 180 giây.
+Chỉ khi bấm dịch trong chế độ API, văn bản/cấu hình gửi tới provider đã chọn. Gemini dùng HTTPS `generativelanguage.googleapis.com` với header `x-goog-api-key`, không đưa key lên URL; OpenAI dùng HTTPS `api.openai.com/v1/responses`, `store:false`. Không gửi clip/PNG tới các API dịch.
+
+Nguồn hiện là văn bản dán vào. **Chưa có nhận lời nói từ video, OCR, lồng tiếng hay tạo MP3.** Bản dịch sát nghĩa, bản viết lại và ghi chú đều cần người dùng duyệt. Thời lượng 15/30/60/90 giây chỉ là mục tiêu; ước tính đọc 2,8 tiếng/giây. Không coi lời AI là xác minh giá, công dụng hay sự kiện.
+
+## Dựng video
+
+Giữ các chức năng 0.4: hệ tọa độ 720×1280 px, X/Y tính từ góc trái trên; W/H khung/video, cỡ chữ 12–144 px (nhập 90 px được), căn giữa hai trục; kéo trực tiếp bốn lớp. Video liên kết W/H 9:16 mặc định, có thể bỏ chọn để kéo giãn.
+
+Nền một/chuyển hai màu và hòa nền alpha mềm; sáu khung dựng sẵn hoặc PNG từ máy (5 MB, 4096 px/cạnh, 8 triệu điểm ảnh; PNG động lấy hình đầu). Sáu font Sans/Serif/Mono thường/đậm kèm giấy phép. Tiêu đề/nội dung chỉnh độc lập màu/font/cỡ/vị trí/căn dòng/viền, không thêm CTA.
+
+MP4 H.264/AAC 720×1280 giữ âm thanh gốc, nguồn tối đa 100 MB / 180 giây. Khung/video có thể nằm ngoài canvas và bị cắt; chữ vượt cạnh phải/chiều cao báo lỗi. Baseline/viền chữ giữa trình duyệt và MP4 có thể chênh nhẹ. Không xóa chữ/watermark có sẵn trên nguồn.
 
 ## Chạy và cập nhật
 
-Cần Python 3.11+ và FFmpeg/FFprobe có libx264/drawtext. Không cài pip/npm hoặc SDK OpenAI; dùng thư viện chuẩn Python. Python/FFmpeg không kèm ZIP, đây chưa phải EXE.
+Cần Python 3.11+, FFmpeg/FFprobe với libx264/drawtext. Không cài pip/npm/SDK dịch vụ. Python/FFmpeg không kèm ZIP; chưa phải EXE.
 
 ```sh
 python3 launch.py
 ```
 
-Windows mở `START_WINDOWS.bat`. macOS/Linux dùng lệnh trên trong thư mục giải nén. Trình duyệt tự mở cổng loopback 8000; `PORT` đổi cổng, `--no-browser` không tự mở trình duyệt. Health: `curl --fail http://127.0.0.1:8000/health`.
+Windows mở `START_WINDOWS.bat`; macOS/Linux chạy lệnh trong thư mục giải nén. Cổng loopback mặc định 8000; đặt `PORT` để đổi, `--no-browser` không tự mở trình duyệt. Health: `curl --fail http://127.0.0.1:8000/health`.
 
-Dừng bản cũ, giải nén bản mới vào thư mục mới rồi chạy. Không cần cài lại Python/FFmpeg đã có. Nếu cùng trình duyệt/địa chỉ/cổng và chưa có thiết kế 0.4, ứng dụng chuyển bản lưu 0.3 từ % sang px. PNG thuộc thư mục cũ cần tải lại khi chuyển thư mục.
+Dừng bản cũ, giải nén thư mục mới rồi chạy; không cần cài lại Python/FFmpeg. Thiết kế px 0.4 được giữ cùng khóa trình duyệt. Nếu cùng trình duyệt/địa chỉ/cổng và chưa có thiết kế px, có thể chuyển bản lưu 0.3 từ % sang px. PNG ở thư mục cũ cần tải lại.
 
-## Tọa độ và lưu dữ liệu
+## Dữ liệu và giới hạn
 
-X tăng sang phải, Y tăng xuống dưới. X/Y của khung, video là cạnh trái/trên, không phải tâm; X/Y hộp chữ cũng vậy. Căn giữa hộp chữ đồng thời chọn căn dòng giữa. Khung/video có thể nằm một phần ngoài canvas; phần đó bị cắt khi xuất. Chữ vượt cạnh phải hoặc chiều cao canvas sẽ báo lỗi. Nền và khung dùng chung giữa xem trước/xuất; baseline và viền chữ có thể chênh nhẹ giữa trình duyệt và FFmpeg.
+Thiết kế và văn bản AI lưu riêng trong localStorage; có nút xóa văn bản. Key không lưu kèm. Video/PNG/MP4 trong `.local/`, Git và gói ZIP bỏ qua. Trạng thái xuất ở RAM, mất khi dừng máy chủ: tải kết quả trước khi dừng. Chỉ xóa `.local/` khi ứng dụng đã dừng và đã giữ tệp cần thiết.
 
-Thiết kế và văn bản AI lưu riêng trong localStorage; có nút xóa văn bản AI. Video/PNG/MP4 ở `.local/`, được Git/ZIP bỏ qua. Trạng thái tác vụ xuất ở RAM, mất khi máy chủ dừng: tải kết quả trước khi dừng. Chỉ xóa `.local/` sau khi ứng dụng đã dừng và đã giữ các tệp cần thiết.
+Chỉ dùng cục bộ với Host/Origin localhost; chưa có xác thực, dọn ổ đĩa, giới hạn hàng đợi video hoặc triển khai công khai. Chưa ghép nhiều clip hay đăng TikTok tự động.
 
-Máy chủ chỉ chấp nhận Host/Origin cục bộ, không phục vụ triển khai công khai. Chưa có đăng nhập, dọn ổ đĩa hay giới hạn hàng đợi video. Chưa có ghép nhiều clip và tự đăng TikTok. Chữ/watermark trong nguồn không bị xóa.
+## Kiểm chứng
 
-## Kiểm tra và đóng gói
+Đã kiểm tra luồng thủ công thực qua HTTP và Chromium: không cần key, không gọi API, tạo/sao chép câu lệnh, nhập JSON thường/có code fence, từ chối JSON sai mà giữ bản cũ, xuất TXT. Gemini/OpenAI được kiểm tra bằng HTTP giả lập: định dạng request, provider/key tách biệt, hết quota không fallback/không retry, không lộ key trong URL/prompt/localStorage. Chưa gọi hai API thật vì máy kiểm tra không có key; chưa xác minh tài khoản/model cụ thể được miễn phí. Chưa chạy trực tiếp Windows/macOS.
 
 ```sh
 python3 -m unittest discover -s tests -v
@@ -58,8 +73,4 @@ node --check ai_ui.js
 python3 build_package.py
 ```
 
-Đã kiểm tra trên Linux/Chromium: số px/cỡ 90 px, căn giữa hai trục, W/H liên kết, kéo lớp, xuất khung dựng sẵn/PNG với âm thanh, lưu thiết kế và bố cục 390px. Luồng UI AI được kiểm tra bằng phản hồi giả lập: cấu hình phong cách/thời lượng, hai kết quả, copy/TXT, chuyển đoạn chọn, lỗi hạn mức và không lưu key. Unit test giả lập HTTP để kiểm tra request HTTPS, Responses API/JSON schema, `store:false`, thiếu key, từ chối phản hồi lỗi/dở dang và thông báo lỗi không lộ key.
-
-**Chưa thử gọi OpenAI thật vì máy kiểm tra không có API key.** Cần nhập key có hạn mức API để kiểm tra bản dịch thực tế. Chưa chạy trực tiếp Windows/macOS.
-
-API: `/upload`, `/frame-upload`, `/design`, `/render`, `/jobs/<id>`, `/download/<id>`, `/frames/<id>`, `/ai-status`, `/translate`. `/translate` nhận `source,style,tone,pronoun,duration,model` và `api_key` tùy chọn; trả `literal,script,notes,model`.
+API thêm: `POST /translation-prompt` (source + phong cách → prompt, không gọi API), `POST /translation-import` (text JSON → hai bản + ghi chú), `/ai-status` trả cấu hình an toàn theo provider. `/translate` nhận thêm `provider: gemini|openai`; giá trị `manual` bị từ chối tại endpoint dịch để không vô tình gọi API.

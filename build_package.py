@@ -6,13 +6,13 @@ import zipfile
 ROOT = Path(__file__).resolve().parent
 FILES = ['app.py', 'ai_translate.py', 'studio.css', 'studio.js', 'ai_ui.js', 'design.py', 'fonts.py', 'index.html', 'launch.py', 'build_package.py',
          'START_WINDOWS.bat', 'START_MAC_LINUX.command', 'HUONG_DAN.txt',
-         'README.md', '.gitignore', 'tests/test_design.py', 'tests/test_ai_translate.py',
+         'README.md', '.gitignore', 'tests/test_design.py', 'tests/test_ai_translate.py', 'tests/test_translation_modes.py',
          'assets/DejaVuSans.ttf', 'assets/DejaVuSans-Bold.ttf',
          'assets/DejaVuSerif.ttf', 'assets/DejaVuSerif-Bold.ttf',
          'assets/DejaVuSansMono.ttf', 'assets/DejaVuSansMono-Bold.ttf', 'assets/FONT_LICENSE.txt']
 
 if __name__ == '__main__':
-    output = ROOT / 'ReviewStudio-v0.4.zip'
+    output = ROOT / 'ReviewStudio-v0.5.zip'
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as package:
         for name in FILES:
             package.write(ROOT / name, 'ReviewStudio/'+name)

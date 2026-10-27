@@ -1,128 +1,114 @@
-REVIEW STUDIO 0.4 — THIẾT KẾ NỀN, KHUNG PNG, CHỮ VÀ VIDEO
+REVIEW STUDIO 0.5 — THỦ CÔNG KHÔNG API / GEMINI / OPENAI
 
-CẬP NHẬT TỪ BẢN CŨ
-Đóng ứng dụng cũ. Giải nén toàn bộ ReviewStudio-v0.4.zip vào thư mục mới
-có quyền ghi. Không chạy trực tiếp từ trong ZIP. Nếu đã cài Python và
-FFmpeg thì không cần cài lại; chuyển xuống mục CHẠY.
+CẬP NHẬT
+Đóng bản cũ, giải nén toàn bộ ReviewStudio-v0.5.zip vào thư mục mới có
+quyền ghi. Không chạy từ trong ZIP. Đã có Python/FFmpeg thì không cần
+cài lại. Thiết kế px bản 0.4 dùng lại nếu cùng trình duyệt/địa chỉ/cổng.
+PNG thuộc thư mục cũ cần tải lại khi chuyển thư mục.
 
 CÀI MỘT LẦN
-Cần Python 3.11+ và FFmpeg (có ffprobe, drawtext, libx264).
-Không cần pip/npm. Dựng video không cần API key; dịch AI cần key
-OpenAI của bạn. Font tiếng Việt đã kèm theo.
+Cần Python 3.11+, FFmpeg/FFprobe có libx264/drawtext. Không cần pip/npm.
+Font tiếng Việt kèm sẵn. Python/FFmpeg không kèm ZIP; chưa phải EXE.
 
 Windows 10/11, PowerShell:
   winget install --exact --id Python.Python.3.12
   winget install --exact --id Gyan.FFmpeg
-Đóng/mở lại terminal hoặc File Explorer để nhận PATH sau khi cài.
+Đóng/mở lại terminal hoặc File Explorer để nhận PATH.
 Không có winget: cài Python từ https://www.python.org/downloads/
 (chọn Add Python to PATH), FFmpeg từ https://ffmpeg.org/download.html.
-Có thể đặt ffmpeg.exe và ffprobe.exe vào thư mục bin cạnh launch.py.
+Hoặc đặt ffmpeg.exe và ffprobe.exe trong thư mục bin cạnh launch.py.
 
-macOS đã có Homebrew:
+macOS có Homebrew:
   brew install python ffmpeg
-
 Ubuntu 24.04 / Debian 12 hoặc mới hơn:
   sudo apt update
   sudo apt install python3 ffmpeg
 
 CHẠY
 Windows: nhấp đúp START_WINDOWS.bat.
-macOS/Linux: vào thư mục đã giải nén trong Terminal, chạy:
-  python3 launch.py
-Hoặc cấp quyền/chạy START_MAC_LINUX.command:
-  chmod +x START_MAC_LINUX.command
-  ./START_MAC_LINUX.command
-Trình duyệt tự mở http://127.0.0.1:8000. Nếu không tự mở, nhập địa chỉ đó.
-Giữ cửa sổ dòng lệnh mở khi dùng. Ctrl+C để dừng.
-
-DÙNG THỬ
-1. Chọn clip tối đa 100 MB, 180 giây. MP4 H.264 được khuyến nghị.
-2. Điền tiêu đề/nội dung, Enter để chủ động xuống dòng.
-3. Chọn mẫu hồng/xanh, sau đó chỉnh từng tab:
-   NỀN: màu gợi ý, màu tùy chọn, một màu/chuyển hai màu, vùng hòa nền.
-   KHUNG: 6 kiểu có sẵn, không khung hoặc PNG từ máy. Đổi màu, vị trí,
-   độ đục và kích thước khung. Độ bóng chỉ áp dụng khung hồng.
-   TIÊU ĐỀ/NỘI DUNG: font, màu, cỡ 12–144 px, X/Y, độ rộng, căn dòng, viền.
-   VIDEO: nhập X/Y/W/H theo px, giữ tỷ lệ 9:16 và nút căn giữa hai trục.
-4. Kéo trực tiếp: chọn lớp cần di chuyển trong hộp dưới bản xem trước
-   rồi kéo trên hình. Khung và từng phần chữ di chuyển riêng.
-5. Bấm Xuất MP4, chờ sẵn sàng rồi bấm Tải video về máy.
-   Kết quả 720x1280, giữ âm thanh gốc. Bản này đã bỏ CTA.
-
-KHUNG PNG
-Tải tại tab Khung. Giới hạn 5 MB, mỗi cạnh tối đa 4096 px,
-tổng tối đa 8 triệu điểm ảnh. Nên dùng PNG có vùng giữa trong suốt.
-Ảnh giữ nguyên tỷ lệ và căn giữa trong hộp khung, không bị kéo méo.
-Khung tùy chỉnh giữ màu của PNG; điều khiển màu trong/viền chỉ dành
-cho khung dựng sẵn. PNG động chỉ lấy hình đầu, không phát chuyển động.
-Sau khi tải, chỉnh hộp khung rồi đặt chữ vào đúng vùng trống của ảnh.
-
-LƯU Ý
-- Đổi khung hoặc kéo khung không tự kéo chữ theo.
-- Chữ vượt khung hình sẽ báo lỗi: giảm cỡ, tăng độ rộng hoặc kéo lên.
-- Nếu chữ ra ngoài khung trang trí nhưng vẫn trong video, ứng dụng vẫn
-  cho xuất. Hãy kiểm tra bố cục trước khi xuất.
-- Video khác tỷ lệ bị cắt về 9:16 trước khi phóng/di chuyển. Thu nhỏ
-  hoặc dịch video sẽ để lộ màu nền ở chỗ trống.
-- Chữ và watermark có sẵn trên clip được giữ nguyên.
-- Không có giọng đọc AI, ghép nhiều clip hoặc tự đăng TikTok.
-- Chỉ dùng cục bộ; chưa có đăng nhập và tự dọn ổ đĩa.
-
-DỮ LIỆU
-Thiết kế tự lưu trên trình duyệt này. Clip/PNG/kết quả ở .local trong
-thư mục ứng dụng, không đưa lên dịch vụ bên ngoài. Khi đổi thư mục/máy,
-có thể cần tải lại khung PNG. Tải kết quả cần giữ trước khi đóng máy chủ.
-Chỉ xóa .local khi ứng dụng đã dừng và đã giữ các tệp cần thiết.
-
-KHẮC PHỤC
-Thiếu FFmpeg: thử ffmpeg -version và ffprobe -version trong terminal.
-Cổng 8000 bận: đóng bản cũ hoặc chọn cổng khác:
+macOS/Linux: trong thư mục giải nén, chạy python3 launch.py.
+Hoặc chmod +x START_MAC_LINUX.command rồi ./START_MAC_LINUX.command.
+Trình duyệt tự mở http://127.0.0.1:8000. Giữ cửa sổ dòng lệnh mở khi dùng.
+Ctrl+C để dừng. Cổng bận: đóng bản cũ hoặc chọn cổng khác:
   PowerShell: $env:PORT='8001'; python launch.py
   macOS/Linux: PORT=8001 python3 launch.py
-PNG lỗi: xuất lại thành PNG tĩnh đúng kích thước cho phép.
-Xuất video lỗi: thử MP4 H.264 ngắn hơn, giảm nội dung chữ.
 
-ĐÃ KIỂM TRA
-Đã thử dựng video trên Linux/Chromium và bản ZIP giải nén.
-Phần AI dùng phản hồi giả lập trong kiểm thử; chưa gọi OpenAI thật vì
-máy kiểm tra không có API key. Bạn cần nhập key có hạn mức để thử dịch.
-Chưa thử trực tiếp Windows/macOS. Đây là gói mã nguồn có trình khởi
-động; chưa phải EXE và không kèm Python/FFmpeg.
+CHỌN CÁCH DỊCH
+Mở tab Dịch & biên tập AI. Nguồn hiện là VĂN BẢN tiếng Trung do bạn dán,
+tối đa 8.000 ký tự; chưa tự nghe video, OCR hoặc tạo giọng đọc/MP3.
+Chọn Review / Tin tức / Mẹo / Giới thiệu, giọng văn, xưng hô và mục tiêu
+15/30/60/90 giây hoặc giữ đủ ý. Thời lượng chỉ là ước tính.
 
-TỌA ĐỘ PIXEL MỚI
-Canvas 720x1280 px. Góc trên trái là X=0,Y=0. X tăng sang phải, Y tăng
-xuống dưới. W là rộng, H là cao. Có thể nhập số trực tiếp, ví dụ cỡ chữ
-90 px, X=90, Y=120. Nút Căn giữa ngang/dọc áp dụng riêng từng lớp.
-X/Y là cạnh trái/trên của hộp, không phải tâm như bản 0.3. Nếu cùng
-trình duyệt và địa chỉ/cổng, thiết kế 0.3 được chuyển sang px khi chưa
-có bản lưu 0.4. Giữ tỷ lệ 9:16 khi sửa W/H video được bật mặc định.
+A. THỦ CÔNG — MẶC ĐỊNH, KHÔNG CẦN API KEY
+1. Dán nguồn và chọn phong cách, bấm Tạo câu lệnh.
+2. Sao chép câu lệnh, mở Gemini hoặc ChatGPT web bằng nút trong tool.
+3. Bạn tự đăng nhập và dán câu lệnh trên website đó, chờ câu trả lời.
+4. Sao chép đủ JSON gồm literal/script/notes về ô kết quả thủ công,
+   bấm Nhập JSON. Có thể nhận JSON được bọc trong khối ```json.
+5. Nếu chỉ có văn bản kịch bản: dán trực tiếp vào ô Kịch bản tiếng Việt,
+   có thể nhập bản dịch sát nghĩa riêng bằng tay.
+6. Duyệt và sửa, sao chép hoặc Tải TXT để tạo MP3 bên ngoài.
+Tool không gọi API trong chế độ này. Web AI có hạn mức riêng và cần
+Internet; đây không phải AI dịch tự động offline. Không tự điều khiển
+web, lấy cookie/token hoặc dùng tài khoản web như API.
 
-DỊCH VÀ VIẾT KỊCH BẢN TIẾNG VIỆT
-1. Mở tab Dịch & biên tập AI trên thanh đầu trang.
-2. Dán lời thoại/phụ đề tiếng Trung, tối đa 8.000 ký tự. Chưa tự lấy lời
-   nói từ video.
-3. Chọn Review/Tin tức/Mẹo/Giới thiệu, giọng văn, cách xưng hô và thời
-   lượng mục tiêu. Thời lượng chỉ là ước tính, không bảo đảm khớp video.
-4. Mở Kết nối OpenAI, nhập API key TRONG ỨNG DỤNG, không gửi key trong
-   chat. Model mặc định gpt-4.1-mini, có thể đổi nếu tài khoản hỗ trợ.
-   Key không lưu vào localStorage/file, tải lại trang cần nhập lại.
-   Nếu máy chủ có OPENAI_API_KEY hoặc REVIEW_OPENAI_KEY thì có thể để
-   trống ô key. OPENAI_MODEL là model mặc định tùy chọn.
-5. Bấm Dịch & viết lại. Văn bản/cấu hình gửi tới api.openai.com qua HTTPS.
-   Không gửi video hoặc PNG tới AI. Phí API tính riêng với ChatGPT.
-6. Đối chiếu bản dịch sát nghĩa và sửa kịch bản. Kiểm tra tên riêng, giá,
-   đơn vị, công dụng và các điểm AI đánh dấu. Không coi bản dịch là
-   xác minh sự thật.
-7. Sao chép hoặc Tải TXT để đưa vào công cụ tạo MP3 bên ngoài. Ứng dụng
-   không tự tạo giọng đọc. TXT chỉ chứa kịch bản sạch, mã UTF-8.
-8. Muốn lấy một đoạn lên video: bôi đen đoạn trong ô kịch bản (tối đa
-   600 ký tự), bấm Đưa đoạn chọn lên video. Không tự cắt mất kịch bản dài.
+B. GEMINI API — CÓ THỂ CÓ HẠN MỨC MIỄN PHÍ
+1. Chọn Gemini API. Lấy key Google AI Studio:
+   https://aistudio.google.com/apikey
+2. Nhập key tại Kết nối API trong ứng dụng, không gửi key trong chat.
+3. Model gợi ý gemini-2.5-flash; có thể đổi thành model tài khoản hỗ trợ.
+4. Kiểm tra điều kiện, quota và giá hiện hành trước khi gọi:
+   https://ai.google.dev/gemini-api/docs/pricing
+5. Bấm Dịch & viết lại, chờ hai bản và ghi chú cần kiểm chứng.
+Google quyết định hạn mức miễn phí và cước; tool không thể bảo đảm mọi
+lượt gọi đều miễn phí. Không tự retry hoặc chuyển sang OpenAI trả phí
+khi hết quota. Bạn có thể tự đổi về Thủ công.
+Key máy chủ tùy chọn: REVIEW_GEMINI_KEY / GEMINI_API_KEY / GOOGLE_API_KEY.
+Model tùy chọn: GEMINI_MODEL. Cần HTTPS tới generativelanguage.googleapis.com.
 
-LỖI OPENAI
-- Key sai/hết hiệu lực: nhập lại tại Kết nối. Không gửi key trong chat.
-- Hết hạn mức: kiểm tra thanh toán/hạn mức trên tài khoản API OpenAI.
-- Model không có quyền: chọn model được cấp quyền, hỗ trợ Responses API
-  và Structured Outputs.
-- Mất mạng/timeout: kiểm tra truy cập HTTPS tới api.openai.com.
-- Kết quả dở dang: giảm độ dài nguồn rồi thử lại.
-Văn bản AI tự lưu trên trình duyệt, có nút xóa. Key không được lưu kèm.
+C. OPENAI API — TÍNH PHÍ RIÊNG
+Chọn OpenAI API, nhập key từ https://platform.openai.com/api-keys.
+Model mặc định gpt-4.1-mini; có thể đổi nếu model có Responses API và
+Structured Outputs. Phí API riêng với ChatGPT Free/Plus.
+Key máy chủ: REVIEW_OPENAI_KEY / OPENAI_API_KEY; model: OPENAI_MODEL.
+Cần HTTPS tới api.openai.com.
+
+KEY VÀ KẾT QUẢ
+Key hai provider giữ riêng trong bộ nhớ phiên, không lưu vào file,
+localStorage hoặc ZIP. Tải lại trang cần nhập lại key. Không gửi key qua
+chat. Văn bản/cấu hình chỉ gửi tới provider API đã chọn khi bấm dịch;
+video và PNG không gửi tới các API dịch.
+Bản dịch và kịch bản cần duyệt tên riêng, giá, đơn vị, công dụng và ghi
+chú; không coi AI là xác minh sự thật. Không tự đổi giá sang tiền Việt.
+Muốn lấy đoạn lên video: bôi đen tối đa 600 ký tự trong ô kịch bản rồi
+bấm Đưa đoạn chọn lên video. Toàn bộ kịch bản vẫn giữ để tải TXT.
+
+DỰNG VIDEO
+1. Chọn clip tối đa 100 MB / 180 giây. MP4 H.264 được khuyến nghị.
+2. Nhập tiêu đề/nội dung; Enter xuống dòng.
+3. Tab Nền: màu tùy chọn/chuyển hai màu, vị trí/chiều cao vùng hòa nền.
+4. Tab Khung: 6 mẫu, không khung hoặc PNG tĩnh từ máy. PNG tối đa 5 MB,
+   4096 px/cạnh, 8 triệu điểm ảnh; giữ tỷ lệ, căn giữa trong hộp. PNG
+   động chỉ lấy hình đầu. Màu trong/viền chỉ chỉnh khung dựng sẵn.
+5. Tab Tiêu đề/Nội dung: font, màu, cỡ 12–144 px, X/Y, độ rộng, căn dòng,
+   viền và khoảng dòng. Chữ/khung di chuyển độc lập, không tự bám nhau.
+6. Tab Video: nhập X/Y/W/H. Giữ tỷ lệ 9:16 bật mặc định, tắt để kéo giãn.
+7. Chọn lớp cần kéo dưới bản xem trước hoặc dùng số/nút căn giữa hai trục.
+8. Xuất MP4, chờ sẵn sàng rồi tải. Kết quả 720x1280, giữ tiếng gốc,
+   không thêm CTA và không xóa chữ/watermark có sẵn trong nguồn.
+X/Y lấy góc trên trái làm gốc, đơn vị px. X tăng sang phải, Y tăng xuống.
+Khung/video có thể ra ngoài canvas và bị cắt. Chữ vượt cạnh phải/chiều
+cao sẽ báo lỗi: giảm X/Y, cỡ chữ hoặc tăng độ rộng phù hợp.
+
+DỮ LIỆU VÀ GIỚI HẠN
+Thiết kế/văn bản AI tự lưu trên trình duyệt, có nút xóa văn bản AI.
+Clip, PNG và kết quả ở .local trong thư mục ứng dụng. Tải kết quả cần
+giữ trước khi đóng máy chủ. Chỉ xóa .local khi ứng dụng đã dừng và đã
+giữ các tệp cần thiết. Chỉ dùng cục bộ; chưa có đăng nhập, dọn ổ đĩa,
+ghép nhiều clip hoặc tự đăng TikTok.
+
+KIỂM TRA
+Thủ công đã thử qua HTTP cục bộ và Chromium: tạo prompt, nhập JSON,
+copy/TXT không cần key và không gọi API. Gemini/OpenAI kiểm tra bằng
+phản hồi giả lập, chưa gọi thật do máy không có key. Chưa xác minh
+model/tài khoản cụ thể được miễn phí. Chưa thử trực tiếp Windows/macOS.

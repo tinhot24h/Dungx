@@ -148,7 +148,9 @@ class Handler(BaseHTTPRequestHandler):
         if match and (FRAMES / (match[1]+'.png')).is_file():
             return self.respond(200, (FRAMES / (match[1]+'.png')).read_bytes(), 'image/png')
         if path == '/ai-status':
-            return self.respond(200, {'configured':ai_translate.configured(),'model':ai_translate.default_model()})
+            return self.respond(200, {'configured':ai_translate.configured(),'model':ai_translate.default_model(),
+                                     'providers':{name:dict(configured=ai_translate.configured(name),model=ai_translate.default_model(name))
+                                                  for name in ('openai','gemini')}})
         if path == '/health':
             return self.respond(200, {'status': 'ok'})
         match = re.fullmatch(r'/(jobs|download)/([a-f0-9]{32})', path)
@@ -177,6 +179,12 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         try:
             size = int(self.headers.get('Content-Length', '0'))
+            if path in ('/translation-prompt','/translation-import'):
+                if not 0 < size <= 196608:
+                    raise ValueError('Yêu cầu quá lớn.')
+                raw = json.loads(self.rfile.read(size))
+                result = {'prompt':ai_translate.manual_prompt(raw)} if path.endswith('prompt') else ai_translate.import_manual(raw)
+                return self.respond(200,result)
             if path == '/translate':
                 if not 0 < size <= 65536:
                     raise ValueError('Yêu cầu dịch quá lớn.')
