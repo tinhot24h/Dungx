@@ -1,13 +1,13 @@
-REVIEW STUDIO 0.5 — THỦ CÔNG KHÔNG API / GEMINI / OPENAI
+REVIEW STUDIO 0.6 — VIDEO / DỊCH AI / ÂM THANH AI33
 
 CẬP NHẬT
-Đóng bản cũ, giải nén toàn bộ ReviewStudio-v0.5.zip vào thư mục mới có
+Đóng bản cũ, giải nén toàn bộ ReviewStudio-v0.6.zip vào thư mục mới có
 quyền ghi. Không chạy từ trong ZIP. Đã có Python/FFmpeg thì không cần
 cài lại. Thiết kế px bản 0.4 dùng lại nếu cùng trình duyệt/địa chỉ/cổng.
 PNG thuộc thư mục cũ cần tải lại khi chuyển thư mục.
 
 CÀI MỘT LẦN
-Cần Python 3.11+, FFmpeg/FFprobe có libx264/drawtext. Không cần pip/npm.
+Cần Python 3.11+, FFmpeg/FFprobe có libx264/drawtext và libmp3lame. Không cần pip/npm.
 Font tiếng Việt kèm sẵn. Python/FFmpeg không kèm ZIP; chưa phải EXE.
 
 Windows 10/11, PowerShell:
@@ -35,7 +35,7 @@ Ctrl+C để dừng. Cổng bận: đóng bản cũ hoặc chọn cổng khác:
 
 CHỌN CÁCH DỊCH
 Mở tab Dịch & biên tập AI. Nguồn hiện là VĂN BẢN tiếng Trung do bạn dán,
-tối đa 8.000 ký tự; chưa tự nghe video, OCR hoặc tạo giọng đọc/MP3.
+tối đa 8.000 ký tự; chưa tự nghe video hoặc OCR. MP3 được tạo riêng ở tab Âm thanh ai33.
 Chọn Review / Tin tức / Mẹo / Giới thiệu, giọng văn, xưng hô và mục tiêu
 15/30/60/90 giây hoặc giữ đủ ý. Thời lượng chỉ là ước tính.
 
@@ -112,3 +112,40 @@ Thủ công đã thử qua HTTP cục bộ và Chromium: tạo prompt, nhập JS
 copy/TXT không cần key và không gọi API. Gemini/OpenAI kiểm tra bằng
 phản hồi giả lập, chưa gọi thật do máy không có key. Chưa xác minh
 model/tài khoản cụ thể được miễn phí. Chưa thử trực tiếp Windows/macOS.
+
+MỚI TRONG 0.6: TẠO GIỌNG VỚI AI33.PRO
+1. Mở tab Âm thanh ai33, nhập AI33 API KEY trong ứng dụng. Chỉ nhập giá
+   trị key, không nhập cả chuỗi xi-api-key:. Không gửi key trong chat.
+   Không dùng key Gemini/OpenAI. Có thể cấu hình biến máy chủ trước khi
+   chạy: REVIEW_AI33_KEY hoặc AI33_API_KEY.
+2. Lấy kịch bản tiếng Việt từ tab AI hoặc dán văn bản.
+3. Bấm Kiểm tra số dư credit để đọc số dư (tùy chọn). Tạo giọng có thể
+   trừ credit ai33, không phải chức năng dịch miễn API.
+4. Chọn thư viện và Tải thư viện giọng, dùng bộ lọc/tìm kiếm/phân trang.
+   Chọn giọng hoặc dán voice_id đã có prefix nhà cung cấp. Giọng mẫu
+   edge_vi-VN-HoaiMyNeural từ tài liệu; quyền dùng phụ thuộc tài khoản.
+5. Chọn tốc độ 0,5–1,5. Mục tùy chọn bổ sung nhận tên file gợi ý và ID
+   từ điển phát âm đã có. Từ điển chỉ ảnh hưởng cách đọc.
+6. Bấm Tạo audio. Tool nhận task_id, tự kiểm tra mỗi 5 giây. Chờ trạng
+   thái done rồi tải/chuẩn hóa MP3. Khi error, tool dừng; không tự tạo
+   lại để tránh trừ credit trùng.
+7. Nghe và Tải MP3 về máy. MP3 chưa tự thay âm thanh video.
+8. Nếu chờ lâu hoặc reload: nhập key lại, dùng task_id hoặc tải lịch sử
+   để lấy lại kết quả. Không cần tạo audio mới. Dừng tự kiểm tra chỉ
+   dừng theo dõi, không hủy tác vụ bên ai33. Tự theo dõi tối đa 15 phút
+   mỗi đợt; có thể kiểm tra lại tác vụ cũ.
+
+AI33 cho phép văn bản tối đa 1.000.000 ký tự theo tài liệu. File nguồn
+tải cục bộ tối đa 100 MB; kịch bản rất dài nên chia đoạn. Cần Internet
+HTTPS tới api.ai33.pro và máy chủ lưu audio do ai33 trả về.
+Key không lưu localStorage/file/ZIP, không gửi tới CDN hoặc media host.
+MP3 cache ở .local/audio; task_id và văn bản có thể lưu trên trình duyệt.
+Đổi thư mục/máy có thể cần tải lại MP3 bằng task_id/key.
+Chưa có hội thoại nhiều giọng, tạo clone mới, CRUD từ điển, xóa/refund
+tác vụ, tải transcript hoặc tự ghép audio vào video.
+
+KIỂM THỬ AI33
+Đã thử bằng phản hồi API giả lập theo ảnh tài liệu bạn cung cấp, với
+chuyển MP3 thật bằng FFmpeg, phát/tua/tải trong Chromium và phục hồi
+cache. Chưa gọi API ai33 thật vì môi trường chưa có key và bị chặn
+truy cập host. Bạn cần key có quyền/credit để xác minh giọng thực tế.

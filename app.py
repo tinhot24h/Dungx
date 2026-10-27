@@ -15,16 +15,21 @@ from urllib.parse import urlparse
 from design import settings, layout, artwork, frame_box, video_box
 from fonts import FONTS
 import ai_translate
+import ai33_audio
+import audio_files
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / '.local'
 DATA.mkdir(exist_ok=True)
 FRAMES = DATA / 'frames'
 FRAMES.mkdir(exist_ok=True)
+AUDIO = DATA / 'audio'
+AUDIO.mkdir(exist_ok=True)
 JOBS = {}
 LOCK = threading.Lock()
 RENDER_LOCK = threading.Lock()
 AI_SLOTS = threading.BoundedSemaphore(2)
+AUDIO_SLOTS = threading.BoundedSemaphore(3)
 
 
 def probe(path):
@@ -133,13 +138,56 @@ class Handler(BaseHTTPRequestHandler):
             return False
         return True
 
+    def serve_audio(self, path, attachment=False):
+        size=path.stat().st_size
+        start,end=0,size-1
+        range_header=self.headers.get('Range')
+        if range_header:
+            match=re.fullmatch(r'bytes=(\d*)-(\d*)',range_header)
+            valid=bool(match and (match[1] or match[2]))
+            if valid:
+                if match[1]:
+                    start=int(match[1])
+                    end=min(size-1,int(match[2])) if match[2] else size-1
+                else:
+                    valid=int(match[2])>0
+                    start=max(0,size-int(match[2]))
+                valid=valid and start<=end and start<size
+            if not valid:
+                self.send_response(416)
+                self.send_header('Content-Range',f'bytes */{size}')
+                self.send_header('Content-Length','0')
+                self.end_headers()
+                return
+        self.send_response(206 if range_header else 200)
+        self.send_header('Content-Type','audio/mpeg')
+        self.send_header('Accept-Ranges','bytes')
+        self.send_header('Content-Length',str(end-start+1))
+        self.send_header('Content-Disposition',('attachment' if attachment else 'inline')+'; filename="review-voice.mp3"')
+        self.send_header('X-Content-Type-Options','nosniff')
+        if range_header:
+            self.send_header('Content-Range',f'bytes {start}-{end}/{size}')
+        self.end_headers()
+        remaining=end-start+1
+        try:
+            with path.open('rb') as source:
+                source.seek(start)
+                while remaining:
+                    chunk=source.read(min(remaining,256*1024))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    remaining-=len(chunk)
+        except (BrokenPipeError,ConnectionResetError):
+            pass
+
     def do_GET(self):
         if not self.allowed():
             return
         path = urlparse(self.path).path
         if path == '/':
             return self.respond(200, (ROOT / 'index.html').read_bytes(), 'text/html; charset=utf-8')
-        if path in ('/studio.css','/studio.js','/ai_ui.js'):
+        if path in ('/studio.css','/studio.js','/ai_ui.js','/audio_ui.js'):
             mime = 'text/css' if path.endswith('.css') else 'text/javascript'
             return self.respond(200, (ROOT/path.lstrip('/')).read_bytes(), mime+'; charset=utf-8')
         if path in ('/assets/'+font[0] for font in FONTS.values()):
@@ -147,6 +195,11 @@ class Handler(BaseHTTPRequestHandler):
         match = re.fullmatch(r'/frames/([a-f0-9]{32})', path)
         if match and (FRAMES / (match[1]+'.png')).is_file():
             return self.respond(200, (FRAMES / (match[1]+'.png')).read_bytes(), 'image/png')
+        if path == '/audio-config':
+            return self.respond(200, {'configured':ai33_audio.configured()})
+        audio_match=re.fullmatch(r'/audio/file/([a-f0-9]{32})',path)
+        if audio_match and (AUDIO / (audio_match[1]+'.mp3')).is_file():
+            return self.serve_audio(AUDIO / (audio_match[1]+'.mp3'), 'download=1' in urlparse(self.path).query.split('&'))
         if path == '/ai-status':
             return self.respond(200, {'configured':ai_translate.configured(),'model':ai_translate.default_model(),
                                      'providers':{name:dict(configured=ai_translate.configured(name),model=ai_translate.default_model(name))
@@ -179,6 +232,32 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         try:
             size = int(self.headers.get('Content-Length', '0'))
+            if path in ('/audio/voices','/audio/create','/audio/task','/audio/history','/audio/credits','/audio/cache'):
+                if not 0 < size <= (4*1024*1024 if path=='/audio/create' else 32768):
+                    raise ValueError('Yêu cầu audio quá lớn hoặc trống.')
+                raw=json.loads(self.rfile.read(size))
+                if not isinstance(raw,dict):
+                    raise ValueError('Yêu cầu audio không hợp lệ.')
+                if not AUDIO_SLOTS.acquire(blocking=False):
+                    return self.respond(429, {'error':'Đang xử lý các yêu cầu âm thanh khác. Hãy chờ, không tạo lại tác vụ.'})
+                try:
+                    if path=='/audio/voices':
+                        result=ai33_audio.voice_library(raw)
+                    elif path=='/audio/create':
+                        result=ai33_audio.create_tts(raw)
+                    elif path=='/audio/history':
+                        result=ai33_audio.list_tasks(raw)
+                    elif path=='/audio/credits':
+                        result=ai33_audio.credits(raw)
+                    elif path=='/audio/cache':
+                        result=audio_files.cache(raw,AUDIO)
+                    else:
+                        detail=ai33_audio.get_task(raw)
+                        result={key:value for key,value in detail.items() if key!='audio_url'}
+                        result['audio_available']=bool(detail['audio_url'])
+                finally:
+                    AUDIO_SLOTS.release()
+                return self.respond(200,result)
             if path in ('/translation-prompt','/translation-import'):
                 if not 0 < size <= 196608:
                     raise ValueError('Yêu cầu quá lớn.')
@@ -267,6 +346,8 @@ class Handler(BaseHTTPRequestHandler):
                 threading.Thread(target=render, args=(key, command), daemon=True).start()
                 return self.respond(202, {'id': key})
             self.respond(404, {'error': 'Không tìm thấy.'})
+        except ai33_audio.AudioError as error:
+            self.respond(error.status, {'error':str(error)})
         except ai_translate.AIError as error:
             self.respond(error.status, {'error':str(error)})
         except ValueError as error:

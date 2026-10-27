@@ -1,8 +1,27 @@
-# Review Studio 0.5
+# Review Studio 0.6
 
-Dựng video review 9:16, tạo câu lệnh dùng trên AI web hoặc dịch qua Gemini/OpenAI API.
+Dựng video review 9:16, dịch văn bản Trung qua thủ công/Gemini/OpenAI, tạo giọng đọc qua ai33.pro.
 
-**[Tải bản 0.5](https://github.com/tinhot24h/Dungx/raw/refs/heads/main/ReviewStudio-v0.5.zip)** · Cài/chạy: `HUONG_DAN.txt`.
+**[Tải bản 0.6](https://github.com/tinhot24h/Dungx/raw/refs/heads/main/ReviewStudio-v0.6.zip)** · Cài/chạy: `HUONG_DAN.txt`.
+
+## Mới: Âm thanh ai33
+
+Mở tab **Âm thanh ai33** hoặc bấm **Tạo giọng ai33** từ kịch bản tiếng Việt:
+
+1. Nhập **ai33.pro API key** trong ứng dụng, hoặc đặt `REVIEW_AI33_KEY` / `AI33_API_KEY` trước khi chạy máy chủ. Không dùng key Gemini/OpenAI, không gửi key trong chat.
+2. Lấy kịch bản từ tab AI hoặc dán văn bản Việt. Có thể lấy nội dung review hiện tại.
+3. Chọn thư viện Edge/Vbee/ElevenLabs/Minimax/Kokoro/Fish Audio/giọng clone đã có; lọc ngôn ngữ, giới tính, tìm kiếm và phân trang. Có thể nhập trực tiếp voice_id có prefix. Giọng ví dụ `edge_vi-VN-HoaiMyNeural` lấy từ tài liệu, quyền dùng giọng phụ thuộc tài khoản.
+4. Chỉnh tốc độ **0,5–1,5**; có thể gửi tên file gợi ý hoặc ID từ điển phát âm đã tạo ở ai33.
+5. Kiểm tra số dư credit nếu muốn, bấm **Tạo audio**. Tool gửi multipart/form-data tới API v3, giữ task_id và theo dõi qua Common API v1.
+6. Khi `done`, lấy `metadata.audio_url`, tải/chuẩn hóa MP3 rồi nghe và tải trong tool. Nếu lỗi, dừng và hiển thị hướng dẫn; không tự tạo lại tác vụ.
+
+Tạo giọng có thể trừ credit ai33, độc lập với chế độ dịch miễn API. Chi phí thực tế phụ thuộc provider/giọng/tài khoản; không tự ước tính cước. Poll mỗi 5 giây, dừng khi done/error hoặc sau 15 phút theo dõi. Dừng tự kiểm tra không hủy tác vụ ở ai33. Có thể kiểm tra task_id hoặc chọn lịch sử để lấy lại file mà không tạo lại.
+
+MP3 tải riêng, **chưa tự thay tiếng trong video**. Nguồn TTS tối đa 1.000.000 ký tự theo tài liệu, file nguồn tải tối đa 100 MB; kịch bản rất dài nên chia đoạn. MP3 đã cache vẫn nghe/tải được khi tải lại trang; key cần nhập lại để truy vấn ai33. Khi đổi thư mục ứng dụng, file cache cũ không được chuyển tự động.
+
+Key chỉ ở bộ nhớ phiên/server environment, không lưu file/localStorage/ZIP. Key không gửi tới CDN/media host. Link audio chỉ lấy từ tác vụ đã xác thực, không có endpoint nhận link tải tùy ý. File chuyển bằng FFmpeg có `libmp3lame`; MP3 hỗ trợ HTTP Range để tua/nghe trong trình duyệt. Định dạng nguồn hỗ trợ MP3/WAV/FLAC/Ogg/M4A, không nhận playlist.
+
+Phạm vi hiện tại là TTS một giọng, thư viện giọng, credit và lịch sử. Chưa tạo clone mới, hội thoại nhiều người, CRUD từ điển, xóa/refund tác vụ, tải transcript hoặc ghép MP3 vào video. API contract và nguồn ảnh tài liệu: [docs/ai33-api.md](docs/ai33-api.md).
 
 ## Chọn cách dịch
 
@@ -34,7 +53,7 @@ Chọn provider trong giao diện, nhập key ở **Kết nối API**. Key của
 
 Chỉ khi bấm dịch trong chế độ API, văn bản/cấu hình gửi tới provider đã chọn. Gemini dùng HTTPS `generativelanguage.googleapis.com` với header `x-goog-api-key`, không đưa key lên URL; OpenAI dùng HTTPS `api.openai.com/v1/responses`, `store:false`. Không gửi clip/PNG tới các API dịch.
 
-Nguồn hiện là văn bản dán vào. **Chưa có nhận lời nói từ video, OCR, lồng tiếng hay tạo MP3.** Bản dịch sát nghĩa, bản viết lại và ghi chú đều cần người dùng duyệt. Thời lượng 15/30/60/90 giây chỉ là mục tiêu; ước tính đọc 2,8 tiếng/giây. Không coi lời AI là xác minh giá, công dụng hay sự kiện.
+Nguồn hiện là văn bản dán vào. **Chưa có nhận lời nói từ video hoặc OCR. Phần dịch không tạo giọng; MP3 được tạo riêng trong tab Âm thanh ai33.** Bản dịch sát nghĩa, bản viết lại và ghi chú đều cần người dùng duyệt. Thời lượng 15/30/60/90 giây chỉ là mục tiêu; ước tính đọc 2,8 tiếng/giây. Không coi lời AI là xác minh giá, công dụng hay sự kiện.
 
 ## Dựng video
 
@@ -46,7 +65,7 @@ MP4 H.264/AAC 720×1280 giữ âm thanh gốc, nguồn tối đa 100 MB / 180 gi
 
 ## Chạy và cập nhật
 
-Cần Python 3.11+, FFmpeg/FFprobe với libx264/drawtext. Không cài pip/npm/SDK dịch vụ. Python/FFmpeg không kèm ZIP; chưa phải EXE.
+Cần Python 3.11+, FFmpeg/FFprobe với libx264/drawtext, libmp3lame cho MP3. Không cài pip/npm/SDK dịch vụ. Python/FFmpeg không kèm ZIP; chưa phải EXE.
 
 ```sh
 python3 launch.py
@@ -58,11 +77,13 @@ Dừng bản cũ, giải nén thư mục mới rồi chạy; không cần cài l
 
 ## Dữ liệu và giới hạn
 
-Thiết kế và văn bản AI lưu riêng trong localStorage; có nút xóa văn bản. Key không lưu kèm. Video/PNG/MP4 trong `.local/`, Git và gói ZIP bỏ qua. Trạng thái xuất ở RAM, mất khi dừng máy chủ: tải kết quả trước khi dừng. Chỉ xóa `.local/` khi ứng dụng đã dừng và đã giữ tệp cần thiết.
+Thiết kế và văn bản AI lưu riêng trong localStorage; có nút xóa văn bản. Key không lưu kèm. Video/PNG/MP4/MP3 trong `.local/`, Git và gói ZIP bỏ qua. Trạng thái xuất video ở RAM, mất khi dừng máy chủ: tải kết quả trước khi dừng. Chỉ xóa `.local/` khi ứng dụng đã dừng và đã giữ tệp cần thiết.
 
 Chỉ dùng cục bộ với Host/Origin localhost; chưa có xác thực, dọn ổ đĩa, giới hạn hàng đợi video hoặc triển khai công khai. Chưa ghép nhiều clip hay đăng TikTok tự động.
 
 ## Kiểm chứng
+
+AI33: kiểm tra HTTP giả lập đúng API v3/v1 do người dùng cung cấp; key/header/multipart, phân trang giọng, trạng thái doing/done/error, credit/history, không retry tạo, không lộ key. FFmpeg đã chuyển WAV mẫu thành MP3 thật, FFprobe xác minh, Chromium phát/tua/download MP3 qua Range 206/416, khôi phục cache sau reload và không lưu key; bố cục 390/320px. Chưa gọi ai33 thật vì không có key và mạng môi trường chặn host; cần thử synthesis thực với tài khoản có quyền/credit.
 
 Đã kiểm tra luồng thủ công thực qua HTTP và Chromium: không cần key, không gọi API, tạo/sao chép câu lệnh, nhập JSON thường/có code fence, từ chối JSON sai mà giữ bản cũ, xuất TXT. Gemini/OpenAI được kiểm tra bằng HTTP giả lập: định dạng request, provider/key tách biệt, hết quota không fallback/không retry, không lộ key trong URL/prompt/localStorage. Chưa gọi hai API thật vì máy kiểm tra không có key; chưa xác minh tài khoản/model cụ thể được miễn phí. Chưa chạy trực tiếp Windows/macOS.
 
@@ -70,7 +91,10 @@ Chỉ dùng cục bộ với Host/Origin localhost; chưa có xác thực, dọn
 python3 -m unittest discover -s tests -v
 node --check studio.js
 node --check ai_ui.js
+node --check audio_ui.js
 python3 build_package.py
 ```
 
 API thêm: `POST /translation-prompt` (source + phong cách → prompt, không gọi API), `POST /translation-import` (text JSON → hai bản + ghi chú), `/ai-status` trả cấu hình an toàn theo provider. `/translate` nhận thêm `provider: gemini|openai`; giá trị `manual` bị từ chối tại endpoint dịch để không vô tình gọi API.
+
+API cục bộ ai33: `GET /audio-config`, `POST /audio/voices`, `/audio/create`, `/audio/task`, `/audio/credits`, `/audio/history`, `/audio/cache`; `GET /audio/file/<asset-id>` để phát hoặc `?download=1` để tải. Không nhét API key vào query string.
