@@ -35,7 +35,8 @@ class AudioCacheTests(unittest.TestCase):
             self.assertGreater(result['bytes'],100)
             mp3=directory/'cache'/(result['asset_id']+'.mp3')
             subprocess.run(['ffmpeg','-v','error','-i',str(mp3),'-f','null','-'],check=True,capture_output=True)
-            self.assertEqual([p.suffix for p in (directory/'cache').iterdir()],['.mp3'])
+            self.assertEqual(sorted(p.suffix for p in (directory/'cache').iterdir()),['.json','.mp3'])
+            self.assertNotIn('dummy-ai33-key',next((directory/'cache').glob('*.json')).read_text())
 
 
 if __name__=='__main__':unittest.main()

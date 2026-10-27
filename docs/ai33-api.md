@@ -47,3 +47,9 @@ MP3 files are validated with FFprobe and cached under `.local/audio/<task-hash>.
 ## Validation boundaries
 
 Unit tests use HTTP response fixtures matching the screenshots. A separate local integration harness simulated provider responses while exercising real FFmpeg conversion and browser MP3 playback/download/range handling. No live ai33.pro calls or billed synthesis were made: the environment has no ai33 key and its current network policy blocks the provider host. The first real synthesis needs a user-supplied key in the app and provider credits/permissions.
+
+## Thay đổi 0.7
+
+Thư viện giọng tự tải nhiều trang (100 giọng/trang yêu cầu, tôn trọng page_size trả về, dừng khi trang trống). Giữ file_name đã gửi cùng task_id trong catalog cục bộ; không lưu key/link có chữ ký. MP3 có thể chọn sang trình dựng hoặc nhập thủ công.
+
+Download gửi Accept audio, User-Agent và Referer ai33; giữ xác minh TLS và proxy. Lỗi HTTP có mã AUDIO_HTTP_*, TLS/mạng/định dạng được tách riêng. Khi done, UI cung cấp link gốc từ tác vụ xác thực để người dùng mở bằng trình duyệt và nhập file; không tạo lại TTS. Chưa chứng minh nguyên nhân lỗi tải thật nếu chưa có phản hồi CDN của tài khoản.

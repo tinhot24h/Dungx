@@ -75,6 +75,28 @@ class AudioApiTests(unittest.TestCase):
                 with self.assertRaises(ValueError):api.create_tts(self.fields(**fields))
             call.assert_not_called()
 
+    def test_missing_has_more_uses_total_and_requested_page_size(self):
+        result=dict(data=[dict(voice_id='edge_one')],pagination=dict(total=210))
+        with patch.object(api,'json_request',return_value=result):
+            first=api.voice_library(dict(api_key='dummy-key',provider='edge',page=1,page_size=100))
+            last=api.voice_library(dict(api_key='dummy-key',provider='edge',page=3,page_size=100))
+        self.assertTrue(first['has_more']);self.assertFalse(last['has_more'])
+
+    def test_capped_page_size_and_empty_page_stop(self):
+        result=dict(data=[dict(voice_id='edge_one')],pagination=dict(total=210,page_size=30))
+        with patch.object(api,'json_request',return_value=result):
+            page=api.voice_library(dict(api_key='dummy-key',provider='edge',page=3,page_size=100))
+        self.assertTrue(page['has_more']);self.assertEqual(page['page_size'],30)
+        with patch.object(api,'json_request',return_value=dict(data=[],pagination=dict(has_more=True))):
+            self.assertFalse(api.voice_library(dict(api_key='dummy-key'))['has_more'])
+
+    def test_download_http_error_is_diagnostic_and_does_not_leak_signed_url(self):
+        opener=unittest.mock.Mock()
+        opener.open.side_effect=HTTPError('https://cdn.example/audio?token=secret',403,'secret',{},io.BytesIO(b'error'))
+        with tempfile.TemporaryDirectory() as folder,patch.object(audio_files,'public_url',side_effect=lambda url:url),patch.object(audio_files.request,'build_opener',return_value=opener),self.assertRaises(api.AudioError) as result:
+            audio_files.download('https://cdn.example/audio?token=secret',Path(folder)/'out')
+        self.assertIn('AUDIO_HTTP_403',str(result.exception));self.assertNotIn('token=secret',str(result.exception))
+
     def test_task_paths_and_nonpublic_media_urls_rejected(self):
         for task in ('../private','x?key=secret',''):
             with self.assertRaises(ValueError):api.task_id(dict(task_id=task))

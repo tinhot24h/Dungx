@@ -35,23 +35,25 @@ def settings(raw):
     spec = dict(fade_start=(44,0,90),fade_height=(18,2,60),opacity=(100,0,100),
                 frame_x=(50,0,100),frame_y=(62,0,95),frame_width=(90,20,100),
                 frame_height=(26,8,60),frame_opacity=(100,0,100),gloss=(65,0,100),
-                zoom=(100,50,200),video_x=(0,-80,80),video_y=(0,-80,80))
+                zoom=(100,50,200),video_x=(0,-80,80),video_y=(0,-80,80),video_zoom=(100,25,400),video_rotation=(0,-180,180))
     if px:
         spec.update(fade_start=(563,0,1152),fade_height=(230,16,768),
                     frame_x=(36,-720,720),frame_y=(794,-1280,1280),
                     frame_width=(648,80,720),frame_height=(333,60,1000),
                     video_x=(0,-2160,720),video_y=(0,-3840,1280),
                     video_width=(720,180,2160),video_height=(1280,320,3840))
+    out.setdefault('video_fit','cover')
+    if out['video_fit'] not in ('cover','contain','stretch'):raise ValueError('Cách đặt video không hợp lệ.')
     for name in ('title','body'):
         spec.update({name+'_size':(30 if name=='title' else 22,12,144),
                      name+'_x':(50,0,100),name+'_y':(64 if name=='title' else 73,0,98),
-                     name+'_width':(76,20,100),name+'_outline':(1,0,5),name+'_gap':(4,0,24)})
+                     name+'_width':(76,20,100),name+'_height':(0,0,1280),name+'_outline':(1,0,5),name+'_gap':(4,0,24)})
         if px:
             spec.update({name+'_x':(86,0,719),name+'_y':(819 if name=='title' else 934,0,1270),
                          name+'_width':(548,60,720)})
         out.setdefault(name+'_font','sans-bold' if name=='title' else 'sans')
         out.setdefault(name+'_align','center')
-        if out[name+'_font'] not in FONTS or out[name+'_align'] not in ('left','center','right'):
+        if out[name+'_font'] not in FONTS or out[name+'_align'] not in ('left','center','right','justify'):
             raise ValueError('Font hoặc căn chữ không hợp lệ.')
     for key,(default,low,high) in spec.items():
         value=out.get(key,default)
@@ -66,7 +68,9 @@ def settings(raw):
 
 def video_box(opts):
     if opts.get('units') == 'px':
-        return {key:round(opts['video_'+key]) for key in ('x','y','width','height')}
+        b={key:round(opts['video_'+key]) for key in ('x','y','width','height')}
+        z=opts.get('video_zoom',100)/100
+        return dict(x=round(b['x']+b['width']*(1-z)/2),y=round(b['y']+b['height']*(1-z)/2),width=max(1,round(b['width']*z)),height=max(1,round(b['height']*z)))
     zoom = opts['zoom']/100
     w,h = round(720*zoom/2)*2,round(1280*zoom/2)*2
     return dict(width=w,height=h,x=round((720-w)/2+720*opts['video_x']/100),
@@ -83,33 +87,43 @@ def frame_box(opts):
     return dict(x=x,y=y,width=w,height=h)
 
 
-def layout(opts):
+def layout(opts,strict=True):
     result=[]
     for key in ('title','body'):
         text=opts.get(key,'')
-        if not text.strip():
-            continue
+        if not text.strip():continue
         font,size=opts[key+'_font'],opts[key+'_size']
-        px = opts.get('units') == 'px'
+        px=opts.get('units')=='px'
         box_width=round(opts[key+'_width'] if px else W*opts[key+'_width']/100)
-        lines=wrap(text,font,size,box_width-2*opts[key+'_outline']-4)
-        step=size+opts[key+'_gap']
+        lines=[];paragraph_ends=[]
+        for paragraph in text.split('\n'):
+            wrapped=wrap(paragraph,font,size,box_width-2*opts[key+'_outline']-4)
+            lines.extend(wrapped);paragraph_ends.extend([False]*(len(wrapped)-1)+[True])
+        step=size+opts[key+'_gap'];natural=len(lines)*step
+        height=opts.get(key+'_height',0) or natural
         y=round(opts[key+'_y'] if px else H*opts[key+'_y']/100)
-        if len(lines)>16 or y+len(lines)*step>H-4:
-            raise ValueError(('Tiêu đề' if key=='title' else 'Nội dung')+' vượt khung hình. Giảm cỡ chữ, tăng độ rộng hoặc kéo lên.')
         x=round(opts[key+'_x'] if px else max(2,min(W-box_width-2,W*opts[key+'_x']/100-box_width/2)))
-        if x+box_width>W:
-            raise ValueError('Hộp chữ vượt cạnh phải. Giảm X hoặc độ rộng hộp chữ.')
-        offsets=[]
-        for line in lines:
-            line_width=width(line,font,size)
-            factor={'left':0,'center':.5,'right':1}[opts[key+'_align']]
-            offsets.append(round(x+(box_width-line_width)*factor,2))
-        result.append(dict(key=key,text='\n'.join(lines),lines=lines,line_x=offsets,
-                           x=x,y=y,width=box_width,size=size,gap=opts[key+'_gap'],
-                           font=font,family=FONTS[font][1],align=opts[key+'_align'],
-                           color=opts[key+'_color'],outline=opts[key+'_outline'],
-                           outline_color=opts[key+'_outline_color']))
+        problems=[]
+        if len(lines)>40 or y+natural>H-4:problems.append('Chữ vượt chiều cao canvas. Kéo lên hoặc giảm cỡ chữ.')
+        if x+box_width>W:problems.append('Hộp chữ vượt cạnh phải. Giảm X hoặc độ rộng.')
+        if natural>height+.01:problems.append('Chữ tràn chiều cao hộp. Tăng H, giảm font hoặc đặt H=0 tự động.')
+        if strict and problems:raise ValueError(('Tiêu đề: ' if key=='title' else 'Nội dung: ')+problems[0])
+        offsets=[];line_runs=[]
+        for li,line in enumerate(lines):
+            factor={'left':0,'center':.5,'right':1,'justify':0}[opts[key+'_align']]
+            at=round(x+(box_width-width(line,font,size))*factor,2);offsets.append(at)
+            words=line.split()
+            if opts[key+'_align']=='justify' and not paragraph_ends[li] and len(words)>1:
+                gap=(box_width-sum(width(w,font,size) for w in words))/(len(words)-1)
+                runs=[];pos=x
+                for word in words:
+                    runs.append(dict(text=word,x=round(pos,3)));pos+=width(word,font,size)+gap
+                line_runs.append(runs)
+            else:line_runs.append([dict(text=line,x=at)])
+        result.append(dict(key=key,text='\n'.join(lines),lines=lines,line_x=offsets,line_runs=line_runs,
+                           x=x,y=y,width=box_width,height=height,natural_height=natural,size=size,gap=opts[key+'_gap'],
+                           font=font,family=FONTS[font][1],align=opts[key+'_align'],color=opts[key+'_color'],
+                           outline=opts[key+'_outline'],outline_color=opts[key+'_outline_color'],warnings=problems))
     return result
 
 
@@ -205,3 +219,24 @@ def artwork(opts):
     def chunk(kind,data):
         return struct.pack('!I',len(data))+kind+data+struct.pack('!I',zlib.crc32(kind+data)&0xffffffff)
     return b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('!2I5B',W,H,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(raw,6))+chunk(b'IEND',b'')
+
+
+# Reuse graphics when only text/timeline changes. Cache keys contain no source text or keys.
+from functools import lru_cache
+
+@lru_cache(maxsize=32)
+def _graphic_layer(values,frame):
+    opts=settings(dict(values))
+    if frame:opts['opacity']=0
+    else:opts['frame_style']='none'
+    return artwork(opts)
+
+
+def artwork_layers(opts):
+    bg=('units','color','color2','background','fade_start','fade_height','opacity')
+    fr=('units','frame_style','frame_x','frame_y','frame_width','frame_height','frame_color','border_color','frame_opacity','gloss')
+    background=_graphic_layer(tuple((k,opts[k]) for k in bg),False)
+    values={k:opts[k] for k in fr}
+    if values['frame_style']=='custom':values['frame_style']='none'
+    frame=_graphic_layer(tuple(values.items()),True)
+    return background,frame

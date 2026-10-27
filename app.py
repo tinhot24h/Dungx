@@ -9,10 +9,14 @@ import struct
 import shutil
 import unicodedata
 import uuid
+import time
+from urllib.parse import unquote,quote
+import asset_store
+import media_engine
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
-from design import settings, layout, artwork, frame_box, video_box
+from design import settings, layout, artwork, frame_box, video_box, artwork_layers
 from fonts import FONTS
 import ai_translate
 import ai33_audio
@@ -33,89 +37,61 @@ AUDIO_SLOTS = threading.BoundedSemaphore(3)
 
 
 def probe(path):
-    result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries',
-                             'format=duration:stream=codec_type', '-of', 'json', str(path)],
-                            capture_output=True, text=True, timeout=20, check=True)
-    info = json.loads(result.stdout)
-    if not any(s['codec_type'] == 'video' for s in info['streams']):
-        raise ValueError('Tệp không có hình ảnh video.')
-    duration = float(info['format']['duration'])
-    if not 0 < duration <= 180:
-        raise ValueError('Chọn clip dài tối đa 180 giây.')
-    return duration
+    data=media_engine.probe(path)
+    if not data['has_video'] or data['duration']>1800:raise ValueError('Chọn video có hình ảnh, tối đa 30 phút.')
+    return data
 
 
-def validate_options(opts):
+def validate_options(opts,strict=True):
     opts = settings(opts)
     for field, limit in [('title', 160), ('body', 600)]:
         value = opts.get(field)
-        if not isinstance(value, str) or len(value) > limit or not value.strip():
+        if not isinstance(value, str) or len(value) > limit:
             raise ValueError(f'Nội dung {field} không hợp lệ (tối đa {limit} ký tự).')
         opts[field] = unicodedata.normalize('NFC', '\n'.join(' '.join(line.split()) for line in value.splitlines()))
     if opts['frame_style'] == 'custom' and not (FRAMES / (opts['frame_id']+'.png')).is_file():
         raise ValueError('Khung PNG không còn trong ứng dụng này. Hãy tải lại khung.')
-    layout(opts)
+    layout(opts,strict=strict)
     return opts
 
 
-def compose(folder, options):
-    (folder / 'overlay.png').write_bytes(artwork(options))
-    filters = []
-    for item in layout(options):
-        font = '../../assets/' + FONTS[item['font']][0]
-        for line_number, line in enumerate(item['lines']):
-            if not line.strip():
-                continue
-            filename = f"{item['key']}-{line_number}.txt"
-            (folder / filename).write_text(line, encoding='utf-8')
-            y = item['y'] + line_number*(item['size']+item['gap'])
-            filters.append(f"drawtext=fontfile={font}:textfile={filename}:expansion=none:"
-                           f"fontsize={item['size']}:fontcolor={item['color'].replace('#','0x')}:"
-                           f"x={item['line_x'][line_number]}:y={y}:"
-                           f"borderw={item['outline']}:bordercolor={item['outline_color'].replace('#','0x')}")
-    video = video_box(options)
-    width,height,x,y = (video[k] for k in ('width','height','x','y'))
-    color = options['color'].replace('#','0x')
-    graph = (f"[0:v]split[src][bg];[bg]scale=720:1280,setsar=1,"
-             f"drawbox=color={color}:t=fill[base];"
-             f"[src]scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,format=rgba,"
-             f"scale={width}:{height},setsar=1[clip];"
-             f"[base][clip]overlay={x}:{y}:shortest=1[placed];"
-             "[placed][1:v]overlay=0:0:format=auto[design];")
-    extra = []
-    if options['frame_style'] == 'custom':
-        shutil.copyfile(FRAMES / (options['frame_id']+'.png'),folder/'frame.png')
-        box = frame_box(options)
-        w,h = box['width'],box['height']
-        extra = ['-i','frame.png']
-        graph += (f"[2:v]scale={w}:{h}:force_original_aspect_ratio=decrease,"
-                  f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=0x00000000,format=rgba,"
-                  f"colorchannelmixer=aa={options['frame_opacity']/100}[custom];"
-                  f"[design][custom]overlay={box['x']}:{box['y']}:format=auto[framed];")
-        top = 'framed'
-    else:
-        top = 'design'
-    graph += f"[{top}]" + ','.join(filters) + '[out]'
-    return ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
-            '-i', 'source', '-i', 'overlay.png', *extra, '-filter_complex_threads', '1',
-            '-filter_complex', graph, '-map', '[out]', '-map', '0:a:0?',
-            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22', '-threads', '2',
-            '-r', '30', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k',
-            '-movflags', '+faststart', 'review.mp4']
+def compose(folder,options):
+    folder=Path(folder)
+    video=probe(folder/'source')
+    aid=options.get('audio_asset_id','')
+    audio_path=None;audio=None
+    if aid:
+        if not isinstance(aid,str) or not re.fullmatch('[a-f0-9]{32}',aid) or not (AUDIO/(aid+'.mp3')).is_file():raise ValueError('MP3 không còn trong thư viện. Hãy nhập hoặc tải lại audio.')
+        audio_path=AUDIO/(aid+'.mp3');audio=media_engine.probe(audio_path)
+    frame=FRAMES/(options.get('frame_id','')+'.png') if options['frame_style']=='custom' else None
+    return media_engine.build(folder,options,folder/'source',video,audio_path,audio,frame)
 
 
-def render(job_id, command):
+def render(job_id,command,plan,name):
     with RENDER_LOCK:
-        with LOCK:
-            JOBS[job_id] = {'state': 'rendering'}
+        with LOCK:JOBS[job_id]={'state':'rendering','progress':0,'name':name,'plan':plan}
+        folder=DATA/job_id;progress=folder/'progress.txt';progress.unlink(missing_ok=True)
         try:
-            subprocess.run(command, cwd=DATA / job_id, capture_output=True,
-                           timeout=600, check=True)
-            result = {'state': 'done', 'url': f'/download/{job_id}'}
-        except (subprocess.SubprocessError, OSError):
-            result = {'state': 'error', 'error': 'Xuất video thất bại. Hãy thử clip MP4 H.264 khác hoặc clip ngắn hơn.'}
-        with LOCK:
-            JOBS[job_id] = result
+            with (folder/'render-error.log').open('wb') as err:
+                process=subprocess.Popen(command,cwd=folder,stdout=subprocess.DEVNULL,stderr=err)
+                deadline=time.monotonic()+7200
+                while process.poll() is None:
+                    if time.monotonic()>deadline:
+                        process.kill();process.wait();raise TimeoutError('Quá 2 giờ xử lý. Giảm thời lượng/độ phân giải.')
+                    try:
+                        contents=progress.read_text(errors='replace')[-10000:]
+                        values=re.findall(r'out_time_us=(\d+)',contents)
+                        percent=min(99,round(int(values[-1])/1000000/plan['duration']*100)) if values else 0
+                        with LOCK:JOBS[job_id]['progress']=percent
+                    except OSError:pass
+                    time.sleep(.4)
+                if process.returncode:raise ValueError('FFmpeg xuất lỗi. Kiểm tra media và thông số, hoặc giảm độ phân giải.')
+            actual=media_engine.probe(folder/'review.mp4')
+            if (actual['width'],actual['height'])!=(plan['width'],plan['height']):raise ValueError('Kích thước xuất không đúng yêu cầu.')
+            result={'state':'done','progress':100,'url':f'/download/{job_id}','name':name,'plan':plan,'duration':actual['duration']}
+        except (subprocess.SubprocessError,OSError,ValueError,TimeoutError) as exc:
+            result={'state':'error','error':str(exc),'name':name}
+        with LOCK:JOBS[job_id]=result
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -138,7 +114,7 @@ class Handler(BaseHTTPRequestHandler):
             return False
         return True
 
-    def serve_audio(self, path, attachment=False):
+    def serve_audio(self,path,attachment=False,mime='audio/mpeg',filename='review-voice.mp3'):
         size=path.stat().st_size
         start,end=0,size-1
         range_header=self.headers.get('Range')
@@ -160,10 +136,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 return
         self.send_response(206 if range_header else 200)
-        self.send_header('Content-Type','audio/mpeg')
+        self.send_header('Content-Type',mime)
         self.send_header('Accept-Ranges','bytes')
         self.send_header('Content-Length',str(end-start+1))
-        self.send_header('Content-Disposition',('attachment' if attachment else 'inline')+'; filename="review-voice.mp3"')
+        self.send_header('Content-Disposition',('attachment' if attachment else 'inline')+"; filename=\"media\"; filename*=UTF-8''"+quote(filename))
         self.send_header('X-Content-Type-Options','nosniff')
         if range_header:
             self.send_header('Content-Range',f'bytes {start}-{end}/{size}')
@@ -187,7 +163,7 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == '/':
             return self.respond(200, (ROOT / 'index.html').read_bytes(), 'text/html; charset=utf-8')
-        if path in ('/studio.css','/studio.js','/ai_ui.js','/audio_ui.js'):
+        if path in ('/studio.css','/studio.js','/ai_ui.js','/audio_ui.js','/editor_ui.js'):
             mime = 'text/css' if path.endswith('.css') else 'text/javascript'
             return self.respond(200, (ROOT/path.lstrip('/')).read_bytes(), mime+'; charset=utf-8')
         if path in ('/assets/'+font[0] for font in FONTS.values()):
@@ -195,11 +171,23 @@ class Handler(BaseHTTPRequestHandler):
         match = re.fullmatch(r'/frames/([a-f0-9]{32})', path)
         if match and (FRAMES / (match[1]+'.png')).is_file():
             return self.respond(200, (FRAMES / (match[1]+'.png')).read_bytes(), 'image/png')
+        if path == '/audio/assets':
+            return self.respond(200,{'assets':asset_store.assets(AUDIO)})
+        video_match=re.fullmatch(r'/media/video/([a-f0-9]{32})(/info)?',path)
+        if video_match and (DATA/video_match[1]/'source').is_file():
+            if video_match[2]:
+                try:
+                    data=json.loads((DATA/video_match[1]/'source.json').read_text(encoding='utf-8'))
+                    return self.respond(200,data)
+                except (OSError,ValueError):return self.respond(404,{'error':'Không có thông tin nguồn.'})
+            return self.serve_audio(DATA/video_match[1]/'source',False,'video/mp4','source.mp4')
         if path == '/audio-config':
             return self.respond(200, {'configured':ai33_audio.configured()})
         audio_match=re.fullmatch(r'/audio/file/([a-f0-9]{32})',path)
         if audio_match and (AUDIO / (audio_match[1]+'.mp3')).is_file():
-            return self.serve_audio(AUDIO / (audio_match[1]+'.mp3'), 'download=1' in urlparse(self.path).query.split('&'))
+            record=asset_store.read(AUDIO,audio_match[1]);name=record.get('name','review-voice')
+            name=re.sub(r'\.(mp3|wav|m4a|ogg|flac)$','',name,flags=re.I)+'.mp3'
+            return self.serve_audio(AUDIO / (audio_match[1]+'.mp3'), 'download=1' in urlparse(self.path).query.split('&'),filename=name)
         if path == '/ai-status':
             return self.respond(200, {'configured':ai_translate.configured(),'model':ai_translate.default_model(),
                                      'providers':{name:dict(configured=ai_translate.configured(name),model=ai_translate.default_model(name))
@@ -217,7 +205,7 @@ class Handler(BaseHTTPRequestHandler):
             if kind == 'download' and job and job['state'] == 'done' and output.is_file():
                 self.send_response(200)
                 self.send_header('Content-Type', 'video/mp4')
-                self.send_header('Content-Disposition', 'attachment; filename="tiktok-review.mp4"')
+                self.send_header('Content-Disposition', "attachment; filename=\"review.mp4\"; filename*=UTF-8''"+quote(JOBS.get(key,{}).get('name','review')+'.mp4'))
                 self.send_header('Content-Length', str(output.stat().st_size))
                 self.end_headers()
                 with output.open('rb') as source:
@@ -232,6 +220,19 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         try:
             size = int(self.headers.get('Content-Length', '0'))
+            if path=='/audio/upload':
+                if not 0<size<=100*1024*1024:raise ValueError('MP3 nhập tối đa 100 MB.')
+                original=asset_store.clean_name(unquote(self.headers.get('X-Filename','audio.mp3')))
+                temp=AUDIO/(uuid.uuid4().hex+'.input')
+                try:
+                    with temp.open('wb') as out:
+                        remaining=size
+                        while remaining:
+                            chunk=self.rfile.read(min(1024*1024,remaining))
+                            if not chunk:raise ValueError('Tải audio bị gián đoạn.')
+                            out.write(chunk);remaining-=len(chunk)
+                    return self.respond(200,audio_files.import_audio(temp,AUDIO,original))
+                finally:temp.unlink(missing_ok=True)
             if path in ('/audio/voices','/audio/create','/audio/task','/audio/history','/audio/credits','/audio/cache'):
                 if not 0 < size <= (4*1024*1024 if path=='/audio/create' else 32768):
                     raise ValueError('Yêu cầu audio quá lớn hoặc trống.')
@@ -245,8 +246,14 @@ class Handler(BaseHTTPRequestHandler):
                         result=ai33_audio.voice_library(raw)
                     elif path=='/audio/create':
                         result=ai33_audio.create_tts(raw)
+                        aid=audio_files.asset_id(result['task_id'])
+                        record=asset_store.write(AUDIO,aid,name=raw.get('file_name') or result['task_id'],source='ai33',task_id=result['task_id'],voice_id=raw.get('voice_id',''))
+                        result['name']=record['name']
                     elif path=='/audio/history':
                         result=ai33_audio.list_tasks(raw)
+                        for task in result['tasks']:
+                            record=asset_store.read(AUDIO,audio_files.asset_id(task['task_id']))
+                            task['name']=task.get('name') or record.get('name') or task['task_id']
                     elif path=='/audio/credits':
                         result=ai33_audio.credits(raw)
                     elif path=='/audio/cache':
@@ -255,6 +262,10 @@ class Handler(BaseHTTPRequestHandler):
                         detail=ai33_audio.get_task(raw)
                         result={key:value for key,value in detail.items() if key!='audio_url'}
                         result['audio_available']=bool(detail['audio_url'])
+                        result['remote_audio_url']=detail['audio_url']
+                        record=asset_store.read(AUDIO,audio_files.asset_id(detail['task_id']))
+                        result['name']=detail.get('name') or record.get('name') or detail['task_id']
+                        asset_store.write(AUDIO,audio_files.asset_id(detail['task_id']),name=result['name'],source='ai33',task_id=detail['task_id'])
                 finally:
                     AUDIO_SLOTS.release()
                 return self.respond(200,result)
@@ -298,8 +309,8 @@ class Handler(BaseHTTPRequestHandler):
                     source.unlink(missing_ok=True)
                 return self.respond(200, {'id': key,'url':'/frames/'+key,'width':width,'height':height})
             if path == '/upload':
-                if not 0 < size <= 100 * 1024 * 1024:
-                    return self.respond(413, {'error': 'Chọn video có dung lượng tối đa 100 MB.'})
+                if not 0 < size <= 500 * 1024 * 1024:
+                    return self.respond(413, {'error': 'Chọn video tối đa 500 MB.'})
                 key = uuid.uuid4().hex
                 folder = DATA / key
                 folder.mkdir()
@@ -311,18 +322,24 @@ class Handler(BaseHTTPRequestHandler):
                             raise ValueError('Tải lên bị gián đoạn.')
                         output.write(chunk)
                         remaining -= len(chunk)
-                duration = probe(folder / 'source')
-                return self.respond(200, {'id': key, 'duration': round(duration, 1)})
+                metadata=probe(folder/'source')
+                name=asset_store.clean_name(unquote(self.headers.get('X-Filename','video.mp4')))
+                data=dict(id=key,name=name,url='/media/video/'+key,**metadata)
+                (folder/'source.json').write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8')
+                return self.respond(200,data)
             if path == '/design':
                 if not 0 < size <= 8192:
                     raise ValueError('Yêu cầu không hợp lệ.')
-                opts = validate_options(json.loads(self.rfile.read(size)))
+                opts = validate_options(json.loads(self.rfile.read(size)),strict=False)
                 custom = None
                 if opts['frame_style'] == 'custom':
                     custom = dict(url='/frames/'+opts['frame_id'],**frame_box(opts),opacity=opts['frame_opacity']/100)
-                return self.respond(200, {'image':'data:image/png;base64,'+
-                                         base64.b64encode(artwork(opts)).decode(),
-                                         'text':layout(opts),'custom':custom,'frame':frame_box(opts),'video':video_box(opts)})
+                if opts.get('preview_layers'):
+                    bg,frame=artwork_layers(opts)
+                else:bg,frame=artwork(opts),None
+                image=lambda data:'data:image/png;base64,'+base64.b64encode(data).decode()
+                return self.respond(200,{'image':image(bg),'frame_image':image(frame) if frame else None,
+                                         'text':layout(opts,strict=False),'custom':custom,'frame':frame_box(opts),'video':video_box(opts)})
             if path == '/render':
                 if not 0 < size <= 8192:
                     raise ValueError('Yêu cầu không hợp lệ.')
@@ -338,12 +355,13 @@ class Handler(BaseHTTPRequestHandler):
                         return self.respond(409, {'error': 'Clip đang được xử lý.'})
                     JOBS[key] = {'state': 'queued'}
                 try:
-                    command = compose(folder, opts)
+                    command,plan=compose(folder,opts)
                 except ValueError:
                     with LOCK:
                         JOBS.pop(key, None)
                     raise
-                threading.Thread(target=render, args=(key, command), daemon=True).start()
+                name=asset_store.clean_name(opts.get('project_name'),'review-video').removesuffix('.mp4')
+                threading.Thread(target=render,args=(key,command,plan,name),daemon=True).start()
                 return self.respond(202, {'id': key})
             self.respond(404, {'error': 'Không tìm thấy.'})
         except ai33_audio.AudioError as error:

@@ -1,8 +1,8 @@
-# Review Studio 0.6
+# Review Studio 0.7
 
 Dựng video review 9:16, dịch văn bản Trung qua thủ công/Gemini/OpenAI, tạo giọng đọc qua ai33.pro.
 
-**[Tải bản 0.6](https://github.com/tinhot24h/Dungx/raw/refs/heads/main/ReviewStudio-v0.6.zip)** · Cài/chạy: `HUONG_DAN.txt`.
+**[Tải bản 0.7](https://github.com/tinhot24h/Dungx/raw/refs/heads/main/ReviewStudio-v0.7.zip)** · Cài/chạy: `HUONG_DAN.txt`.
 
 ## Mới: Âm thanh ai33
 
@@ -10,18 +10,18 @@ Mở tab **Âm thanh ai33** hoặc bấm **Tạo giọng ai33** từ kịch bả
 
 1. Nhập **ai33.pro API key** trong ứng dụng, hoặc đặt `REVIEW_AI33_KEY` / `AI33_API_KEY` trước khi chạy máy chủ. Không dùng key Gemini/OpenAI, không gửi key trong chat.
 2. Lấy kịch bản từ tab AI hoặc dán văn bản Việt. Có thể lấy nội dung review hiện tại.
-3. Chọn thư viện Edge/Vbee/ElevenLabs/Minimax/Kokoro/Fish Audio/giọng clone đã có; lọc ngôn ngữ, giới tính, tìm kiếm và phân trang. Có thể nhập trực tiếp voice_id có prefix. Giọng ví dụ `edge_vi-VN-HoaiMyNeural` lấy từ tài liệu, quyền dùng giọng phụ thuộc tài khoản.
+3. Chọn thư viện Edge/Vbee/ElevenLabs/Minimax/Kokoro/Fish Audio/giọng clone đã có; tự tải các trang của nhà cung cấp đã chọn; lọc ngôn ngữ, giới tính và tìm kiếm. Giới hạn mỗi đợt 100 trang/10.000 giọng, có thông báo khi chưa tải hết. Có thể nhập trực tiếp voice_id có prefix. Giọng ví dụ `edge_vi-VN-HoaiMyNeural` lấy từ tài liệu, quyền dùng giọng phụ thuộc tài khoản.
 4. Chỉnh tốc độ **0,5–1,5**; có thể gửi tên file gợi ý hoặc ID từ điển phát âm đã tạo ở ai33.
 5. Kiểm tra số dư credit nếu muốn, bấm **Tạo audio**. Tool gửi multipart/form-data tới API v3, giữ task_id và theo dõi qua Common API v1.
 6. Khi `done`, lấy `metadata.audio_url`, tải/chuẩn hóa MP3 rồi nghe và tải trong tool. Nếu lỗi, dừng và hiển thị hướng dẫn; không tự tạo lại tác vụ.
 
 Tạo giọng có thể trừ credit ai33, độc lập với chế độ dịch miễn API. Chi phí thực tế phụ thuộc provider/giọng/tài khoản; không tự ước tính cước. Poll mỗi 5 giây, dừng khi done/error hoặc sau 15 phút theo dõi. Dừng tự kiểm tra không hủy tác vụ ở ai33. Có thể kiểm tra task_id hoặc chọn lịch sử để lấy lại file mà không tạo lại.
 
-MP3 tải riêng, **chưa tự thay tiếng trong video**. Nguồn TTS tối đa 1.000.000 ký tự theo tài liệu, file nguồn tải tối đa 100 MB; kịch bản rất dài nên chia đoạn. MP3 đã cache vẫn nghe/tải được khi tải lại trang; key cần nhập lại để truy vấn ai33. Khi đổi thư mục ứng dụng, file cache cũ không được chuyển tự động.
+MP3 đã lưu có nút **Dùng MP3 này trong video**; có thể chọn lại trong thư viện hoặc nhập MP3 thủ công. Nguồn TTS tối đa 1.000.000 ký tự theo tài liệu, file nguồn tải tối đa 100 MB; kịch bản rất dài nên chia đoạn. MP3 đã cache vẫn nghe/tải được khi tải lại trang; key cần nhập lại để truy vấn ai33. Khi đổi thư mục ứng dụng, file cache cũ không được chuyển tự động.
 
 Key chỉ ở bộ nhớ phiên/server environment, không lưu file/localStorage/ZIP. Key không gửi tới CDN/media host. Link audio chỉ lấy từ tác vụ đã xác thực, không có endpoint nhận link tải tùy ý. File chuyển bằng FFmpeg có `libmp3lame`; MP3 hỗ trợ HTTP Range để tua/nghe trong trình duyệt. Định dạng nguồn hỗ trợ MP3/WAV/FLAC/Ogg/M4A, không nhận playlist.
 
-Phạm vi hiện tại là TTS một giọng, thư viện giọng, credit và lịch sử. Chưa tạo clone mới, hội thoại nhiều người, CRUD từ điển, xóa/refund tác vụ, tải transcript hoặc ghép MP3 vào video. API contract và nguồn ảnh tài liệu: [docs/ai33-api.md](docs/ai33-api.md).
+Phạm vi hiện tại là TTS một giọng, thư viện giọng, credit và lịch sử. Chưa tạo clone mới, hội thoại nhiều người, CRUD từ điển, xóa/refund tác vụ, tải transcript. API contract và nguồn ảnh tài liệu: [docs/ai33-api.md](docs/ai33-api.md).
 
 ## Chọn cách dịch
 
@@ -61,7 +61,19 @@ Giữ các chức năng 0.4: hệ tọa độ 720×1280 px, X/Y tính từ góc 
 
 Nền một/chuyển hai màu và hòa nền alpha mềm; sáu khung dựng sẵn hoặc PNG từ máy (5 MB, 4096 px/cạnh, 8 triệu điểm ảnh; PNG động lấy hình đầu). Sáu font Sans/Serif/Mono thường/đậm kèm giấy phép. Tiêu đề/nội dung chỉnh độc lập màu/font/cỡ/vị trí/căn dòng/viền, không thêm CTA.
 
-MP4 H.264/AAC 720×1280 giữ âm thanh gốc, nguồn tối đa 100 MB / 180 giây. Khung/video có thể nằm ngoài canvas và bị cắt; chữ vượt cạnh phải/chiều cao báo lỗi. Baseline/viền chữ giữa trình duyệt và MP4 có thể chênh nhẹ. Không xóa chữ/watermark có sẵn trên nguồn.
+MP4 H.264/AAC: 720×1280, **1080×1920**, **2K 1440×2560**, **4K 2160×3840**; nén tiêu chuẩn/chất lượng cao. Nguồn tối đa **500 MB / 30 phút**. Khung/video có thể nằm ngoài canvas và bị cắt; chữ vượt cạnh phải/chiều cao báo lỗi. Baseline/viền chữ giữa trình duyệt và MP4 có thể chênh nhẹ. Không xóa chữ/watermark có sẵn trên nguồn.
+
+## Quy trình dựng 0.7
+
+1. **Chọn nguồn:** tải video, đặt tên dự án; nhập MP3 (100 MB) hoặc chọn audio ai33 đã lưu. Thư viện giữ tên, thời lượng và task_id để đối chiếu; tên gửi ai33 được dùng khi tải MP3. Tác vụ cũ thiếu tên từ API được nhận diện bằng task_id.
+2. **Cắt & khớp âm thanh:** kéo hai đầu từng track hoặc nhập giây bắt đầu/kết thúc (cuối = 0 nghĩa toàn bộ). Mỗi nguồn giữ một đoạn liên tục; chưa cắt bỏ nhiều đoạn ở giữa. Tốc độ video/MP3 độc lập **0,25–4×**, MP3 giữ cao độ; âm lượng **0–300%**, trễ MP3 theo giây. Chọn giữ tiếng gốc, thay bằng MP3 hoặc trộn hai nguồn.
+3. **Khớp thời lượng:** theo MP3 (giữ hình cuối nếu video thiếu); theo video (cắt/đệm im lặng MP3); hoặc lấy đoạn ngắn hơn. Hai nút khớp tốc độ hỗ trợ căn thời lượng; không tự căn từng câu nói.
+4. **Thiết kế:** video có zoom **25–400%**, xoay **−180°…180°**, kiểu phủ kín/vừa khung/kéo giãn. Bấm chữ để chọn, nhấp đúp để sửa trực tiếp; Ctrl+Enter xác nhận, Escape hủy. Kéo hộp để di chuyển, kéo góc dưới phải để đổi kích thước chữ/khung/video. Hộp chữ có W/H; **H = 0 tự động**. Chữ tràn được cảnh báo viền đỏ và chặn xuất đến khi chỉnh vừa. Căn trái/giữa/phải/đều hai bên; dòng cuối đoạn căn trái khi căn đều.
+5. **Xuất video:** chọn độ phân giải và chất lượng. Tọa độ thiết kế luôn 720×1280; video và chữ dựng theo kích thước xuất. Nguồn thấp không có thêm chi tiết khi xuất 4K. Khung PNG trang trí được phóng theo tỷ lệ.
+
+Xem trước phát hai track theo cắt/tốc độ/trễ đã chọn; duyệt lại MP4 sau xuất. Chưa ghép nhiều clip, nhiều MP3 hoặc tạo phụ đề theo câu.
+
+Nếu ai33 đã tạo xong nhưng tool không tải được: chọn đúng task_id/lịch sử và bấm **Kiểm tra tiến độ** để lấy link mới. Lỗi mới có mã HTTP/mạng/TLS/định dạng để chẩn đoán. Nút **Mở audio gốc bằng trình duyệt** cho phép lưu rồi nhập MP3 thủ công; không bấm Tạo audio lại. Chưa xác minh tải từ CDN thật của tài khoản bạn vì môi trường kiểm thử không có key và không truy cập được host ai33.
 
 ## Chạy và cập nhật
 
@@ -92,9 +104,10 @@ python3 -m unittest discover -s tests -v
 node --check studio.js
 node --check ai_ui.js
 node --check audio_ui.js
+node --check editor_ui.js
 python3 build_package.py
 ```
 
 API thêm: `POST /translation-prompt` (source + phong cách → prompt, không gọi API), `POST /translation-import` (text JSON → hai bản + ghi chú), `/ai-status` trả cấu hình an toàn theo provider. `/translate` nhận thêm `provider: gemini|openai`; giá trị `manual` bị từ chối tại endpoint dịch để không vô tình gọi API.
 
-API cục bộ ai33: `GET /audio-config`, `POST /audio/voices`, `/audio/create`, `/audio/task`, `/audio/credits`, `/audio/history`, `/audio/cache`; `GET /audio/file/<asset-id>` để phát hoặc `?download=1` để tải. Không nhét API key vào query string.
+API cục bộ ai33: `GET /audio-config`, `POST /audio/voices`, `/audio/create`, `/audio/task`, `/audio/credits`, `/audio/history`, `/audio/cache`; `POST /audio/upload`, `GET /audio/assets`, `GET /audio/file/<asset-id>` để phát hoặc `?download=1` để tải. Không nhét API key vào query string.

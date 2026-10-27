@@ -10,6 +10,12 @@ import threading
 import time
 from urllib import request, error, parse
 import ai33_audio as api
+import asset_store
+import ssl
+import os
+import uuid
+import errno
+from http.client import HTTPException
 
 LIMIT=100*1024*1024
 _LOCKS={}
@@ -26,7 +32,7 @@ def public_url(url):
     try:
         addresses=socket.getaddrinfo(host,443,type=socket.SOCK_STREAM)
     except OSError:
-        raise api.AudioError('Không phân giải được máy chủ audio. Kiểm tra DNS/mạng trước khi tải lại.') from None
+        raise api.AudioError('[AUDIO_DNS] Không phân giải được máy chủ audio. Kiểm tra DNS/proxy hoặc mở audio gốc bằng trình duyệt.') from None
     if not addresses or any(not ipaddress.ip_address(item[4][0].split('%')[0]).is_global for item in addresses):
         raise api.AudioError('Từ chối tải audio từ địa chỉ mạng nội bộ.')
     return url
@@ -40,31 +46,41 @@ class PublicRedirect(request.HTTPRedirectHandler):
 
 def download(url,target):
     public_url(url)
-    # Default ProxyHandler/HTTPSHandler retain the session proxy and TLS trust.
     opener=request.build_opener(PublicRedirect())
-    deadline=time.monotonic()+120
+    deadline=time.monotonic()+180
+    headers={'Accept':'audio/mpeg,audio/*,application/octet-stream;q=0.9,*/*;q=0.5',
+             'User-Agent':'ReviewStudio/0.7','Referer':'https://ai33.pro/'}
     try:
-        # No xi-api-key, Authorization or cookies go to the media/CDN host.
-        with opener.open(request.Request(url,headers={'Accept':'audio/*,application/octet-stream'}),timeout=45) as response:
+        with opener.open(request.Request(url,headers=headers),timeout=60) as response:
             declared=response.headers.get('Content-Length')
             if declared and declared.isdigit() and int(declared)>LIMIT:
                 raise api.AudioError('File audio vượt giới hạn tải 100 MB.')
             total=0
             with target.open('wb') as output:
                 while True:
-                    if time.monotonic()>deadline:
-                        raise api.AudioError('Tải audio quá lâu. Kiểm tra mạng rồi tải lại tác vụ này.')
+                    if time.monotonic()>deadline:raise api.AudioError('[DOWNLOAD_TIMEOUT] Tải quá 180 giây. Kiểm tra lại tác vụ hoặc mở link gốc trong trình duyệt.')
                     chunk=response.read(256*1024)
-                    if not chunk:
-                        break
+                    if not chunk:break
                     total+=len(chunk)
-                    if total>LIMIT:
-                        raise api.AudioError('File audio vượt giới hạn tải 100 MB.')
+                    if total>LIMIT:raise api.AudioError('File audio vượt giới hạn tải 100 MB.')
                     output.write(chunk)
-        if not total:
-            raise api.AudioError('ai33.pro trả file audio trống.')
-    except (error.URLError,TimeoutError,OSError):
-        raise api.AudioError('Không tải được file audio. Kiểm tra lại tác vụ để lấy link mới, không cần tạo audio lại.',504) from None
+        if not total:raise api.AudioError('[EMPTY_AUDIO] Máy chủ trả file trống. Kiểm tra lại tác vụ, không tạo lại audio.')
+    except error.HTTPError as exc:
+        raise api.AudioError(f'[AUDIO_HTTP_{exc.code}] Máy chủ audio trả HTTP {exc.code}. Link có thể hết hạn hoặc CDN chặn ứng dụng. Kiểm tra lại để lấy link mới, hoặc mở audio gốc bằng trình duyệt; không tạo lại TTS.',502) from None
+    except error.URLError as exc:
+        if isinstance(exc.reason,ssl.SSLCertVerificationError):
+            raise api.AudioError('[AUDIO_TLS] Không xác minh được chứng chỉ máy chủ audio. Kiểm tra chứng chỉ/mạng của máy hoặc mở audio gốc bằng trình duyệt. Không tắt kiểm tra TLS.',502) from None
+        raise api.AudioError('[AUDIO_NETWORK] Không kết nối được máy chủ audio. Kiểm tra mạng/proxy hoặc mở link gốc bằng trình duyệt, không tạo lại TTS.',504) from None
+    except TimeoutError:
+        raise api.AudioError('[AUDIO_TIMEOUT] Máy chủ audio hết thời gian chờ. Kiểm tra lại tác vụ hoặc tải bằng trình duyệt.',504) from None
+    except ssl.SSLError:
+        raise api.AudioError('[AUDIO_TLS] Kết nối TLS tới máy chủ audio thất bại. Kiểm tra mạng/chứng chỉ hoặc dùng trình duyệt, không tắt xác minh TLS.',502) from None
+    except (ConnectionError,HTTPException):
+        raise api.AudioError('[AUDIO_TRANSFER] Máy chủ ngắt truyền audio. Kiểm tra lại tác vụ để tải file hoặc dùng trình duyệt.',504) from None
+    except OSError as exc:
+        if exc.errno in (errno.EACCES,errno.ENOSPC,errno.EROFS,getattr(errno,'EDQUOT',-1)):
+            raise api.AudioError('[AUDIO_DISK] Không lưu được file audio. Kiểm tra quyền ghi và dung lượng thư mục ứng dụng.',500) from None
+        raise api.AudioError('[AUDIO_IO] Lỗi đọc/ghi khi tải audio. Kiểm tra mạng và thư mục lưu, hoặc dùng trình duyệt.',502) from None
 
 
 def media_format(path):
@@ -80,7 +96,7 @@ def media_format(path):
         return 'ogg'
     if head[4:8]==b'ftyp':
         return 'mov'
-    raise api.AudioError('File nhận về không phải MP3/WAV/FLAC/Ogg/M4A được hỗ trợ.')
+    raise api.AudioError('[AUDIO_FORMAT] Link trả dữ liệu không phải MP3/WAV/FLAC/Ogg/M4A, có thể là trang HTML báo lỗi. Mở audio gốc bằng trình duyệt hoặc nhập MP3 thủ công.')
 
 
 def info(path):
@@ -107,7 +123,8 @@ def cache(raw,directory):
         if target.is_file():
             try:
                 metadata=info(target)
-                return dict(task_id=task,asset_id=aid,url='/audio/file/'+aid,**metadata)
+                record=asset_store.write(directory,aid,**metadata,source='ai33',task_id=task)
+                return asset_store.public(record)
             except api.AudioError:
                 target.unlink(missing_ok=True)
         detail=api.get_task(raw)
@@ -124,9 +141,26 @@ def cache(raw,directory):
                            capture_output=True,check=True,timeout=180)
             metadata=info(encoded)
             encoded.replace(target)
-            return dict(task_id=task,asset_id=aid,url='/audio/file/'+aid,**metadata)
+            old=asset_store.read(directory,aid)
+            record=asset_store.write(directory,aid,**metadata,source='ai33',task_id=task,name=detail.get('name') or old.get('name') or task)
+            return asset_store.public(record)
         except (subprocess.SubprocessError,OSError):
             raise api.AudioError('Không chuyển được audio sang MP3. Cần FFmpeg có libmp3lame; không cần tạo lại tác vụ.') from None
         finally:
             source.unlink(missing_ok=True)
             encoded.unlink(missing_ok=True)
+
+
+def import_audio(source,directory,name):
+    directory=Path(directory);directory.mkdir(exist_ok=True)
+    aid=uuid.uuid4().hex;encoded=directory/(aid+'.encoding.mp3');target=directory/(aid+'.mp3')
+    try:
+        fmt=media_format(Path(source))
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-nostdin','-y','-protocol_whitelist','file,pipe',
+                        '-f',fmt,'-i',str(source),'-map','0:a:0','-vn','-c:a','libmp3lame','-b:a','192k',str(encoded)],
+                       capture_output=True,check=True,timeout=300)
+        metadata=info(encoded);encoded.replace(target)
+        return asset_store.public(asset_store.write(directory,aid,name=asset_store.clean_name(name),source='upload',**metadata))
+    except (subprocess.SubprocessError,OSError):
+        raise api.AudioError('Không đọc được audio nhập. Dùng MP3/WAV/M4A/FLAC/Ogg hợp lệ và FFmpeg có libmp3lame.') from None
+    finally:encoded.unlink(missing_ok=True)

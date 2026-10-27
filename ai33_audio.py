@@ -72,7 +72,9 @@ def voice_library(raw):
     page=raw.get('page',1)
     if isinstance(page,bool) or not isinstance(page,int) or not 1<=page<=100000:
         raise ValueError('Trang danh sách giọng không hợp lệ.')
-    query=dict(provider=provider,page=page,page_size=30)
+    size=raw.get('page_size',30)
+    if isinstance(size,bool) or not isinstance(size,int) or not 1<=size<=100:raise ValueError('Số giọng mỗi trang phải từ 1 đến 100.')
+    query=dict(provider=provider,page=page,page_size=size)
     for field,default,limit in [('language','Vietnamese',100),('gender','',40),('search','',200)]:
         value=raw.get(field,default)
         if not isinstance(value,str) or len(value)>limit:
@@ -96,7 +98,13 @@ def voice_library(raw):
                            language=str(item.get('language',''))[:100],gender=str(item.get('gender',''))[:40],
                            preview_url=preview))
     pagination=result.get('pagination',{})
-    return dict(voices=voices,page=page,has_more=bool(pagination.get('has_more',False)) if isinstance(pagination,dict) else False)
+    pagination=pagination if isinstance(pagination,dict) else {}
+    total=pagination.get('total',result.get('total'))
+    actual_size=pagination.get('page_size',pagination.get('limit',size))
+    if isinstance(actual_size,bool) or not isinstance(actual_size,int) or actual_size<1:actual_size=size
+    size=actual_size
+    more=bool(rows) and (bool(pagination.get('has_more')) if 'has_more' in pagination else (page*size<total if isinstance(total,int) else len(rows)>=size))
+    return dict(voices=voices,page=page,page_size=size,total=total,has_more=more)
 
 
 def tts_fields(raw):
@@ -204,7 +212,7 @@ def get_task(raw):
         audio=https_url(audio)
     return dict(task_id=task,status=status,progress=max(0,min(100,progress)),audio_url=audio,
                 credit_cost=cost,type=str(result.get('type',''))[:80],
-                text=str(result.get('text',''))[:1000],
+                text=str(result.get('text',''))[:1000],name=str(result.get('file_name') or metadata.get('file_name') or metadata.get('filename') or result.get('name') or '')[:120],
                 error='ai33.pro báo lỗi tác vụ. Xem chi tiết trong lịch sử ai33.pro; không tạo lại tự động.' if status=='error' else '')
 
 
@@ -228,8 +236,9 @@ def list_tasks(raw):
     for row in rows:
         if not isinstance(row,dict) or not isinstance(row.get('id'),str) or not re.fullmatch('[A-Za-z0-9_-]{1,200}',row['id']):
             continue
+        md=row.get('metadata') if isinstance(row.get('metadata'),dict) else {}
         tasks.append(dict(task_id=row['id'],status=str(row.get('status',''))[:30],
                           created_at=str(row.get('created_at',''))[:80],type=str(row.get('type',''))[:80],
-                          text=str(row.get('text',''))[:1000],
+                          text=str(row.get('text',''))[:1000],name=str(row.get('file_name') or md.get('file_name') or row.get('name') or '')[:120],
                           audio_available=bool((row.get('metadata') or {}).get('audio_url')) if isinstance(row.get('metadata'),dict) else False))
     return dict(tasks=tasks,page=page,has_more=isinstance(result.get('total'),int) and page*20<result['total'])
